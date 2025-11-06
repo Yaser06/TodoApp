@@ -1,0 +1,31 @@
+---
+# Core Project Context — Always Loaded
+version: "1.0"
+source: "Merged from projectPrompt.md + projectConfig.md"
+
+# User Request (from projectPrompt)
+request: ""
+preferredStack: ""
+constraints: []
+nonFunctional: []
+
+# Project Identity (from projectConfig)
+STACK_ID: ""
+stackNotes: ""
+projectName: ""
+domain: ""
+mission: ""
+
+# Essential Technical Signals (subset)
+runtimeLanguage: ""
+frameworkModules: []
+infrastructureTargets: ""
+
+# Automation Entry Point
+startCommand: ""  # Single command to boot everything
+
+# Metadata
+compactMode: true
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

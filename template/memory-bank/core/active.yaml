@@ -1,0 +1,28 @@
+---
+# Active Context — Current Focus
+version: "1.0"
+lastUpdated: "2025-10-30"
+
+# Current Task
+currentTask:
+  id: ""
+  title: ""
+  ac: ""
+  est: ""
+  status: "pending"
+
+# Immediate Work
+inProgress: []
+blockers: []
+
+# Sprint Context
+currentSprint: ""
+sprintGoal: ""
+
+# Next Actions
+nextSteps: []
+
+# Hot Metadata
+compactFormat: true
+updatedBy: "@agent"
+---

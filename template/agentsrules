@@ -1,0 +1,128 @@
+---
+version: "2.0"
+tokenManagement:
+  enabled: true
+  budget: 200000
+  warningThreshold: 150000
+  criticalThreshold: 180000
+  defaultMode: "standard"
+  monitoringFile: "memory-bank/token-monitoring.md"
+  strategyFile: "memory-bank/context-strategy.md"
+contextOptimization:
+  useCompactFormat: true
+  useDeltaUpdates: true
+  lazyLoadStackProfiles: true
+  batchOperations: true
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---
+
+# agentsrules — AI Project Template
+
+## 🎯 Template Identity _(İnsanlar için kısa özet Türkçe: Tek şablon, farklı teknolojiler `agents-stack/<STACK_ID>/` klasörlerinde saklı. AI gerekli stack'i otomatik seçer.)_
+
+## 🧠 Memory Protocol (Token-Optimized)
+1. **Session Bootstrap** (Load context-strategy.md first)
+   - Load `context-strategy.md` and `token-monitoring.md` to understand optimization rules
+   - **Minimal initial load** (estimated 4K tokens):
+     * `projectPrompt.md` (frontmatter only)
+     * `projectConfig.md:STACK_ID`, `projectConfig.md:identity` (fields only, not entire file)
+     * `taskBoard.md:backlog[0:3]` (first 3 tasks only)
+     * `activeContext.md`
+   - Determine `STACK_ID` from `projectConfig.md`. If empty, infer from `projectPrompt.preferredStack` or keywords—write result to `projectConfig.STACK_ID` and log decision in `stackNotes`.
+   - **Defer stack profile loading**: Only load `agents-stack/<STACK_ID>/` resources when coding starts (not during bootstrap)
+   - Generate compact backlog in `taskBoard.md` using abbreviated format (see context-strategy.md compression rules)
+   - Create delta tracker file: `memory-bank/progress-delta.json` for incremental updates
+   - Confirm initialization: `Memory loaded (4K tokens, standard mode). Current: <active task>`.
+   - **Use compact YAML**: `id: "T001"` not `TASK-001`, pipe-separated acceptance criteria, comma-separated tags
+
+2. **Execution Loop** (Token-monitored)
+   - **Before each task**: Check token usage (see token-monitoring.md). If > warningThreshold, switch to minimal mode.
+   - Move highest-priority card from `backlog` to `inProgress`. Update `activeContext.md` with current task only (not full history).
+   - **Lazy load on demand**:
+     * If task involves coding → load `techContext.md:stackOverview` and stack `agentsrules`
+     * If architectural decision → load `systemPatterns.md`
+     * If release work → load `deliverables.md`
+   - Implement changes per stack guidelines. Log new patterns in `systemPatterns` (defer write if token > warning).
+   - Execute automation commands. On failure: fix and retry (max 3x). Capture errors in `progress-delta.json` not full rewrite.
+   - **Batch updates**: Collect changes during task, write once at completion:
+     * Task move: `backlog → done`
+     * Progress metrics update
+     * Deliverable status update (if applicable)
+   - **Token check after task**: If > criticalThreshold → decompose next task before starting.
+   - Repeat until backlog empty OR token budget exhausted (create checkpoint and exit gracefully).
+
+3. **Session Closure**
+   - Flush `progress-delta.json` changes to respective files (batch operation)
+   - Reconcile: cards in correct columns, deliverable statuses accurate, runbook results logged
+   - Generate token usage report from `token-monitoring.md` logs
+   - If session incomplete (token limit): create checkpoint in `memory-bank/checkpoints/latest.json`
+   - Provide summary: completed tasks, token usage (actual vs budget), next steps, checkpoint location (if created)
+
+## 🎯 Token Management Protocol
+1. **Continuous Monitoring**:
+   - After every Read/Write: estimate tokens consumed
+   - Running total tracked in session memory
+   - Log to `progress.md:tokenUsage` array
+
+2. **Threshold Actions**:
+   - **Warning (75%)**: Switch to minimal context mode, unload cold data, create checkpoint
+   - **Critical (90%)**: Decompose current task if incomplete, switch to recovery mode
+   - **Emergency (97%)**: Immediate save, halt execution, provide resume instructions
+
+3. **Task Decomposition**:
+   - If task estimate > 30min AND token > critical: break into 3-5 subtasks
+   - Add subtasks to backlog with parent reference: `id: "T005-1", parent: "T005"`
+   - Mark parent as `status: "decomposed"`
+   - Continue with first subtask in recovery mode
+
+4. **Recovery Protocol**:
+   - Load checkpoint: `checkpoints/latest.json`
+   - Resume with minimal context (2K tokens max)
+   - Complete interrupted task
+   - Full sync after completion
+
+## 🔧 Stack Rules
+- Merge stack-level `agentsrules`, `techProfile`, `patternProfile`, and `automation` data with global settings.
+- Feed `techProfile` into `techContext.stackOverview.stackDefaults`.
+- Map `patternProfile` lists to `systemPatterns.architecturalPrinciples.stackSpecific`, etc.
+- Merge automation by preferring stack overrides for commands, steps, monitoring, and auto tasks.
+
+## 🧱 Coding Standards (General)
+### TIER 1 — Non-Negotiable
+- Keep business logic outside UI/HTTP controllers; enforce domain/service layers.
+- Restrict direct data access to dedicated repositories/adapters.
+- Never commit secrets or API keys.
+- Security, validation, and logging must align with stack policies.
+
+### TIER 2 — Critical
+- Ensure happy-path and failure-path tests accompany each change (stack files may add more requirements).
+- Maintain observability signals (logs/metrics/traces) for new features.
+- Propagate `projectConfig` updates into dependent memory documents immediately.
+
+### TIER 3 — Improvement
+- Favour small, focused functions; conform to stack recommendations.
+- Centralize configuration and avoid magic numbers.
+- Keep documentation current (README, stack notes, system patterns).
+
+## 🔒 Security & Privacy
+- Follow stack-specific authentication and authorization rules.
+- Mask sensitive data in logs and telemetry.
+- Document third-party data handling and compliance considerations.
+
+## ✅ Test Standards
+- Run every test, lint, type-check, and security scan defined in the merged automation profile.
+- Pipeline must fail on any red status until the issue is fixed.
+
+## 🔍 Code Review Checklist
+- Are TIER rules and stack rules honoured?
+- Are memory bank files (especially `projectConfig`, `taskBoard`, `deliverables`, `automation`) up to date?
+- Have observability and security requirements been implemented?
+- Is rollback/feature-flag strategy recorded?
+
+## 🔁 Handoff Procedure
+1. Developer Agent: completes the task, updates `activeContext`, `taskBoard`, `progress`, `deliverables`.
+2. Reviewer Agent: validates code, tests, and documentation; records findings.
+3. Tester Agent: runs required suites and documents results in `progress` + `qualityGates`.
+4. Security Agent: verifies critical surfaces, updates `systemPatterns` or stack rules with findings.
+5. Release/Ops Agent: executes deploy commands, finalizes release checklist, shares artifact locations.

@@ -1,0 +1,32 @@
+---
+# Technical Stack Reference — Cold Data
+version: "1.0"
+loadOnDemand: true
+
+# Full Technical Context
+runtimeLanguage: ""
+frameworkModules: []
+buildTooling: ""
+dataLayer: ""
+cachingStrategy: ""
+infrastructureTargets: ""
+
+# External Dependencies
+externalIntegrations: []
+internalContracts: []
+secretsManagement: ""
+
+# Testing & Quality
+testingStack: []
+staticAnalysisTooling: []
+observabilityStack: ""
+
+# SLOs
+sloNotes: ""
+availabilityTarget: ""
+
+# Metadata
+sourceFile: "projectConfig.md:technicalSignals"
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

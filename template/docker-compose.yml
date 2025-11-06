@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  # Redis: State management, task queue, locks
+  redis:
+    image: redis:7-alpine
+    container_name: ai-orchestrator-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    # Fix #18: Enhanced persistence configuration
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfilename "orchestrator.aof"
+      --appendfsync everysec
+      --auto-aof-rewrite-percentage 100
+      --auto-aof-rewrite-min-size 64mb
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - orchestrator-network
+
+  # Orchestrator API: Coordination service
+  orchestrator-api:
+    build:
+      context: ./tools/orchestrator
+      dockerfile: Dockerfile
+    container_name: ai-orchestrator-api
+    ports:
+      - "8765:8765"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GIT_REMOTE=${GIT_REMOTE:-}
+      - CONFIG_PATH=/app/orchestrator-config.yaml
+      - GIT_AUTHOR_NAME=AI Orchestrator
+      - GIT_AUTHOR_EMAIL=ai@orchestrator.local
+      - GIT_COMMITTER_NAME=AI Orchestrator
+      - GIT_COMMITTER_EMAIL=ai@orchestrator.local
+    volumes:
+      # Mount entire project (Fix #1: source code needed for tests/build)
+      - .:/app
+      # Git & SSH config (Fix #3, #4)
+      - ~/.ssh:/root/.ssh:ro
+      - ~/.gitconfig:/root/.gitconfig:ro
+      - ~/.config/gh:/root/.config/gh:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    command: python main.py
+    restart: unless-stopped
+    networks:
+      - orchestrator-network
+
+  # Task Board: Real-time monitoring (optional)
+  task-board:
+    build:
+      context: ./tools/task-board
+      dockerfile: Dockerfile
+    container_name: ai-task-board
+    ports:
+      - "9090:9090"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ORCHESTRATOR_URL=http://orchestrator-api:8765
+    volumes:
+      - ./memory-bank:/app/memory-bank:ro
+    depends_on:
+      - redis
+      - orchestrator-api
+    restart: unless-stopped
+    networks:
+      - orchestrator-network
+    profiles:
+      - monitoring  # Optional: only start if --profile monitoring
+
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  orchestrator-network:
+    driver: bridge

@@ -1,0 +1,36 @@
+---
+tier1:
+  - "Use Composition API exclusively; avoid Options API"
+  - "TypeScript strict mode required; descriptive variable names with auxiliary verbs (isLoading, hasError)"
+  - "Components: PascalCase naming (AuthWizard.vue), lowercase-dash directories"
+  - "Leverage Nuxt 3 auto-import for components and composables"
+  - "All async data fetching via useFetch, useAsyncData, or $fetch (no axios)"
+  - "Mobile-first responsive design with Tailwind CSS"
+tier2:
+  - "State management with Pinia for centralized state"
+  - "Use <script setup> syntax for all components"
+  - "Composables (camelCase, e.g., useAuthState.ts) for reusable logic"
+  - "SEO optimization via useHead / useSeoMeta"
+  - "Suspense for async components, lazy loading for routes"
+  - "Error handling with error.vue and NuxtErrorBoundary"
+tier3:
+  - "Prioritize functional and declarative patterns; avoid classes"
+  - "UI components with Shadcn Vue + Radix Vue"
+  - "useRuntimeConfig for environment variables"
+  - "ref/reactive/computed for state management"
+  - "E2E tests with Playwright for critical flows"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — Vue3/Nuxt
+
+Modern Vue 3 with Nuxt 3 framework. Emphasizes Composition API, TypeScript, and SSR-optimized data fetching.
+
+## Key Principles
+
+- **Composition API Only**: Modern, reusable, type-safe
+- **Auto-Import**: Nuxt 3's magic for components and composables
+- **SSR-First**: Server-side rendering for performance and SEO
+- **TypeScript**: Strict typing for reliability
+- **Tailwind + Shadcn**: Rapid UI development

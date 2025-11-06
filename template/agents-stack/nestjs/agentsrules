@@ -1,0 +1,36 @@
+---
+tier1:
+  - "Use TypeScript strict mode; no any types without justification"
+  - "Dependency Injection via constructors; avoid property injection"
+  - "Controllers handle HTTP only; business logic in services"
+  - "Use DTOs with class-validator for request/response validation"
+  - "Database access through repositories or TypeORM; no raw SQL in services"
+  - "No secrets in code; use ConfigService with environment variables"
+tier2:
+  - "Global exception filters for centralized error handling"
+  - "Pipes for transformation and validation"
+  - "Guards for authentication/authorization logic"
+  - "Interceptors for logging, caching, response transformation"
+  - "Swagger/OpenAPI documentation auto-generated from decorators"
+  - "Unit tests with Jest; e2e tests for critical flows"
+tier3:
+  - "Modular architecture; feature modules with clear boundaries"
+  - "Use async/await; leverage NestJS async providers"
+  - "Logger service for structured logging"
+  - "Health checks and metrics endpoints"
+  - "API versioning for backward compatibility"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — NestJS
+
+TypeScript backend framework built on Express/Fastify. Emphasizes dependency injection, modularity, and enterprise patterns.
+
+## Key Principles
+
+- **Dependency Injection**: Constructor-based, testable
+- **Modular Architecture**: Feature modules, clear separation
+- **TypeScript First**: Full type safety
+- **Decorator-Based**: Clean, declarative syntax
+- **Production-Ready**: Guards, pipes, interceptors, filters

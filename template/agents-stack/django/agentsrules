@@ -1,0 +1,37 @@
+---
+tier1:
+  - "Follow MVT pattern strictly: Models for data, Views for logic, Templates for presentation"
+  - "Leverage Django ORM for database interactions; avoid raw SQL queries unless necessary"
+  - "Apply CSRF protection, SQL injection prevention, and XSS safeguards (built-in Django security)"
+  - "Keep business logic in models and forms; maintain lightweight views"
+  - "No secrets or credentials in code; use environment variables or Django settings"
+  - "Use select_related and prefetch_related to prevent N+1 query problems"
+tier2:
+  - "Use class-based views (CBVs) for complex logic; function-based views (FBVs) for simpler cases"
+  - "Implement proper indexing on database models (db_index=True) for performance"
+  - "Deploy asynchronous views and Celery tasks for I/O-bound operations"
+  - "Utilize Django cache framework (Redis or Memcached) for frequently accessed data"
+  - "Django signals for decoupled logging and event handling"
+  - "RESTful design with proper HTTP methods and status codes (DRF)"
+tier3:
+  - "Structure projects modularly using Django apps for reusability"
+  - "Custom error pages (404, 500) for better user experience"
+  - "Optimize static file handling with WhiteNoise or CDN integration"
+  - "DRF serializers for validation and JSON responses"
+  - "JWT authentication via djangorestframework_simplejwt"
+  - "Structured logging for monitoring and debugging"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — Django
+
+Django web framework rules emphasizing security, ORM best practices, and scalable architecture patterns.
+
+## Key Principles
+
+- **Security First**: CSRF, SQL injection, XSS protection built-in
+- **ORM Over Raw SQL**: Leverage Django's powerful ORM for maintainability
+- **MVT Pattern**: Clear separation of concerns
+- **Performance**: Query optimization, caching, async support
+- **DRF for APIs**: Django REST Framework for RESTful services

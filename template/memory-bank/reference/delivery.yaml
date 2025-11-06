@@ -1,0 +1,41 @@
+---
+# Deliverables & Quality Gates — Cold Data
+version: "1.0"
+loadOnDemand: true
+
+deliverables:
+  - id: ""
+    name: ""
+    type: ""
+    owner: ""
+    due: ""
+    status: "planned"
+    ac: ""
+
+qualityGates:
+  tests:
+    - name: "Unit tests"
+      cmd: ""
+      thresh:
+        cov: 85
+        act: "block"
+  lint:
+    - name: "Linter"
+      cmd: ""
+      thresh:
+        viol: 0
+        act: "block"
+  security:
+    - name: "Security scan"
+      cmd: ""
+
+releaseChecklist:
+  - item: ""
+    status: "pending"
+    owner: ""
+
+# Metadata
+sourceFile: "deliverables.md"
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

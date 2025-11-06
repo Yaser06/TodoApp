@@ -1,0 +1,38 @@
+---
+tier1:
+  - "Route handler'larda business logic bulunmaz; servis/domain katmanına yönlendirilir"
+  - "Blocking I/O yasak; async DB sürücüsü ve HTTPX AsyncClient kullan"
+  - "Pydantic modelleri dış kontrat; ORM modelleri doğrudan döndürülmez"
+  - "SQL injection riskine karşı parametrik sorgular veya ORM query builder zorunlu"
+  - "Secrets/API anahtarları kaynak kodunda saklanmaz; environment veya secrets manager kullanılır"
+  - "Type hints for all function signatures (PEP 484 compliant)"
+  - "Use `async def` for I/O operations, `def` for CPU-bound functions"
+tier2:
+  - "Depends ile bağımlılık enjeksiyonu; global mutable state'e izin yok"
+  - "Transaction yönetimi repository/adapter katmanında; `async with session.begin()` kullan"
+  - "Exception handling merkezi (`app.add_exception_handler`); kullanıcı dostu hata gövdeleri üret"
+  - "Test kapsamı: happy + negatif senaryo; async testler `pytest.mark.asyncio` ile"
+  - "Early returns with guard clauses; avoid nested conditionals"
+  - "RORO pattern (Receive Object, Return Object) for data flow"
+  - "Functional patterns preferred; minimize class usage where possible"
+tier3:
+  - "Handler fonksiyonları 30 satırı aşmamalı; servis yardımcı fonksiyonları kullan"
+  - "HTTP status kodları anlamlı (201 create, 204 delete, 422 validation error)"
+  - "`pydantic-settings` ile yapılandırma tipli, varsayılanlar dokümante"
+  - "Router modüllerini domain'e göre grupla, `APIRouter(prefix=..., tags=[...])` kullan"
+  - "Redis caching for frequently accessed data"
+  - "Optimize serialization with Pydantic .model_dump()"
+  - "Structured logging with JSON format (not plain text)"
+tier_advanced:
+  - "OpenTelemetry integration for distributed tracing"
+  - "Circuit breaker pattern for external API calls"
+  - "Health check endpoints: /health, /ready"
+  - "Prometheus /metrics endpoint for observability"
+  - "API versioning with /api/v1/ prefix"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — Python FastAPI
+
+Front matter TIER kurallarının makine tarafından okunabilir sürümüdür. Markdown bölümü insanlara yöneliktir; açıklama gerekirse burada paylaşın.

@@ -1,0 +1,24 @@
+---
+tier1:
+  - "TypeScript strict modu kapatılmaz; `any` kullanımı gerekçelendirilmeli"
+  - "UI bileşenlerinde accessibility etiketi ve odak yönetimi zorunlu"
+  - "Network çağrıları merkezi client (Axios/Fetch wrapper) üzerinden yapılır; raw `fetch` yasak"
+  - "Secrets/PII AsyncStorage’da tutulmaz; secure storage kullanılmalı"
+  - "Platform permission ve manifest ayarları (Info.plist, AndroidManifest.xml) eksiksiz doldurulmalı"
+  - "Arayüzler modern tema sistemi (design tokens, dark/light) ve TR/EN dil geçişi içerir; seçili/focus durumları görsel olarak belirgindir"
+tier2:
+  - "React Navigation deep link senaryoları test edilmeli; kritik flow’lar Detox/Maestro ile doğrulanmalı"
+  - "Styling design tokens üzerinden; sabit renk/spacing kullanılmaz"
+  - "API cevapları tip güvenli (`zod`, `io-ts`, custom guard`) parser’lardan geçer"
+  - "Animasyonlarda performans (Reanimated, Gesture Handler) ölçülmeli; frame drop raporlanmalı"
+tier3:
+  - "Feature klasörleri component/hook/service ayrımını korur"
+  - "Error boundary ve global fallback ekranı uygulanır"
+  - "Lazy load/code splitting fırsatları değerlendirilir"
+updatedAt: ""
+updatedBy: ""
+---
+
+# Stack Rules — React Native
+
+Front matter React Native stack’ine özel TIER kurallarını makine tarafından okunabilir biçimde tutar. Markdown açıklama alanı opsiyoneldir.

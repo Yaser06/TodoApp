@@ -1,0 +1,86 @@
+# Task Backlog — Single Source of Truth
+# Used by BOTH Agent and Task Board UI
+#
+# Required fields:
+#   - id: Task ID (T001, T002, etc.)
+#   - title: Task name
+#   - type: Task type (setup/development/testing/security/documentation/review)
+#   - pri: Priority (H/M/L)
+#
+# Optional fields:
+#   - description: Task details
+#   - acceptanceCriteria: Acceptance criteria (pipe-separated: "Login|Logout|Reset")
+#   - est: Estimate (3h, 2d, etc.) - Agent uses this
+#   - tags: Comma-separated (be,fe,auth) - Agent uses this
+#   - dependencies: Task dependencies ["T001", "T002"] - Agent uses this for phase calculation
+#   - source: Task creator (manual/ai)
+#   - status: Explicit status (normally inferred from column)
+
+# Example backlog (remove or modify these):
+backlog:
+  - id: "T001"
+    title: "Setup project structure"
+    type: "setup"
+    pri: "H"
+    description: "Initialize project with basic folder structure and configuration"
+    acceptanceCriteria: "Folders created|Config files added|README updated"
+    dependencies: []
+    source: "ai"
+
+  - id: "T002"
+    title: "Setup database"
+    type: "setup"
+    pri: "H"
+    description: "Configure database connection and create initial schema"
+    acceptanceCriteria: "Database connected|Schema created|Migrations setup"
+    dependencies: []
+    source: "ai"
+
+  - id: "T003"
+    title: "Implement user authentication"
+    type: "development"
+    pri: "H"
+    description: "Build JWT-based authentication system"
+    acceptanceCriteria: "Login endpoint|Register endpoint|Token validation"
+    dependencies: ["T001", "T002"]
+    source: "ai"
+
+  - id: "T004"
+    title: "Create user CRUD API"
+    type: "development"
+    pri: "M"
+    description: "Implement user management endpoints"
+    acceptanceCriteria: "Create user|Read user|Update user|Delete user"
+    dependencies: ["T002", "T003"]
+    source: "ai"
+
+  - id: "T005"
+    title: "Write integration tests"
+    type: "testing"
+    pri: "M"
+    description: "Create integration tests for all endpoints"
+    acceptanceCriteria: "Auth tests|User CRUD tests|Error handling tests"
+    dependencies: ["T003", "T004"]
+    source: "ai"
+
+inProgress: []
+
+blocked: []
+
+done: []
+
+# Sprint Planning (optional, Agent uses this)
+sprintSchedule:
+  - id: ""
+    label: ""
+    goal: ""
+    timeframe: ""
+    tasks: []
+
+# Batch Update Control
+flushThreshold: 10
+pendingChanges: 0
+
+# Metadata
+updatedAt: "2025-11-01"
+updatedBy: "@agent"

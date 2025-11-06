@@ -1,0 +1,23 @@
+---
+tier1:
+  - "TypeScript `strict` modunda çalış; `any` veya `ts-ignore` sadece gerekçeli yorumla kabul edilir"
+  - "UI’yi Tailwind + design tokens (CSS variables) ile stillendir; çıplak HTML bırakma"
+  - "Tüm form alanları, butonlar ve etkileşimli bileşenler için hover/focus/disabled/selected durumları belirgin olmalı"
+  - "İçerik hiyerarşisi ve spacing 4/8 px grid’ine bağlı kalmalı; rastgele margin/padding kullanma"
+  - "Erişilebilirlik: her form alanının label’ı, her butonun aria-label’ı olmalı; kontrast WCAG AA altında kalamaz"
+tier2:
+  - "App Router (Next.js 13+) kullan; server components ve route groups ile layout’u modülerleştir"
+  - "React Query veya tRPC + Zod ile veri katmanını tip güvenli hale getir"
+  - "UI bileşenleri `components/ui/` altında yeniden kullanılabilir atomik yapılara ayrılmalı"
+  - "Design tokens (`theme.css`) üzerinden dark/light mod desteği sağla"
+tier3:
+  - "Storybook veya Playroom ile kritik bileşenlere görsel test hazırlıkları yap"
+  - "Framer Motion veya benzeri ile mikro animasyonlar ekle; performansı koru"
+  - "SEO için metadata ve OpenGraph etiketlerini doldur"
+updatedAt: ""
+updatedBy: ""
+---
+
+# Stack Rules — Next.js Web
+
+Next.js web arayüzleri için temel kalite barı: modern, responsive, erişilebilir ve tasarım sistemiyle tutarlı ekranlar. Bu dosya, küresel kurallara ek kısıtları tanımlar.

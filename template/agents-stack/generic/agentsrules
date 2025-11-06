@@ -1,0 +1,71 @@
+---
+tier1:
+  - "No SQL injection: use parameterized queries or ORM (never string concatenation)"
+  - "No secrets in code: use environment variables or secret managers"
+  - "Input validation required for all user inputs"
+  - "Type hints/type annotations for all functions"
+  - "HTTPS only for production; no plaintext credentials"
+  - "Authentication and authorization on all protected endpoints"
+tier2:
+  - "Structured logging with context (JSON format preferred)"
+  - "Comprehensive error handling with try/catch blocks"
+  - "Unit tests for critical business logic"
+  - "Dependency injection over global state"
+  - "API responses follow consistent format (success/error structure)"
+  - "Rate limiting for public endpoints"
+tier3:
+  - "Functions/methods < 50 lines for readability"
+  - "Descriptive variable names (avoid single letters except loops)"
+  - "Comments for complex logic only; prefer self-documenting code"
+  - "DRY principle: extract repeated code into reusable functions"
+  - "Separation of concerns: business logic separate from I/O"
+  - "Configuration externalized (not hardcoded)"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — Generic (Fallback)
+
+**⚠️ This is the generic fallback stack used when the requested stack is not available.**
+
+These rules apply universal best practices across all programming languages and frameworks. They ensure basic security, maintainability, and code quality.
+
+## When This Stack Is Used
+
+- Requested stack not in `agents-stack/` directory
+- No fallback mapping defined in `stack-validation.yaml`
+- Agent defaults to these universal rules
+
+## Limitations
+
+- ❌ No framework-specific patterns
+- ❌ No language-specific idioms
+- ❌ No ecosystem-specific tooling
+
+## Key Principles
+
+1. **Security First**: SQL injection, XSS, CSRF prevention
+2. **Clean Code**: Readable, maintainable, testable
+3. **Error Handling**: Graceful degradation, user-friendly messages
+4. **Testing**: Unit tests for critical paths
+5. **Documentation**: Self-documenting code, minimal comments
+
+## Recommendation
+
+For better code quality and stack-specific optimizations, add a dedicated stack:
+
+```bash
+# Create stack directory
+mkdir agents-stack/your-stack
+
+# Add required files
+touch agents-stack/your-stack/agentsrules
+touch agents-stack/your-stack/techProfile.md
+touch agents-stack/your-stack/patternProfile.md
+touch agents-stack/your-stack/automation.md
+
+# Update project.yaml
+preferredStack: "your-stack"
+```
+
+Refer to existing stacks (fastapi, django, go, etc.) as templates.

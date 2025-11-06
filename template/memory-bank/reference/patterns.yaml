@@ -1,0 +1,25 @@
+---
+# Architecture Patterns — Cold Data
+version: "1.0"
+loadOnDemand: true
+
+# Stack-Specific Patterns
+stackSpecific: []
+
+# General Principles
+architecturalPrinciples: []
+
+# Design Patterns
+designPatterns: []
+
+# Best Practices
+bestPractices: []
+
+# Anti-Patterns
+antiPatterns: []
+
+# Metadata
+sourceFile: "systemPatterns.md + agents-stack/{STACK_ID}/patternProfile.md"
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

@@ -1,0 +1,23 @@
+---
+tier1:
+  - "Controller katmanında business logic bulunmaz; request/response mapping dışında kod yasak"
+  - "Servis katmanı repository dışındaki veri kaynaklarına doğrudan erişmez; port/adapter kullan"
+  - "API request/response için yalnızca DTO kullan; Entity sınıflarını dışa açma"
+  - "SQL sorguları parametrik/ORM tabanlı olmalı; string concatenation yasak"
+  - "Secrets ve credential bilgileri kaynak koda gömülmez"
+tier2:
+  - "Service metotları transactional ise @Transactional anotasyonu ile işaretlenir"
+  - "Exception handling @ControllerAdvice üzerinde; controller’da try/catch ile response dönme"
+  - "Logger kullanımı SLF4J; System.out yasak"
+  - "Test coverage: JUnit 5 ile happy + error path; repository değişikliklerinde Testcontainers"
+tier3:
+  - "Service metotlarını ≤ 40 satır tut; karmaşık akışları helper/service sınıflarına böl"
+  - "DTO mapping için MapStruct tercih edin; manuel mapping ayrı mapper sınıfında"
+  - "ResponseEntity HTTP status kodları doğru kullanılmalı (201 create, 204 delete vb.)"
+updatedAt: ""
+updatedBy: ""
+---
+
+# Stack Rules — Spring Boot
+
+Yukarıdaki front matter TIER kurallarının makine tarafından okunabilir halidir. Markdown listeleri değiştirmek gerekli değildir; ekip içi açıklamalar için kullanabilirsiniz.

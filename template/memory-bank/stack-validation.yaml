@@ -1,0 +1,198 @@
+---
+version: "1.0"
+enabled: true
+
+# Valid stack identifiers
+validStacks:
+  - "fastapi"
+  - "django"
+  - "go"
+  - "nestjs"
+  - "nextjs"
+  - "vue3-nuxt"
+  - "spring-boot"
+  - "react-native"
+  - "generic"  # Fallback for unsupported stacks
+
+# Automatic fallback mapping for unsupported stacks
+fallbackMapping:
+  # Python frameworks
+  flask: "fastapi"
+  bottle: "fastapi"
+  tornado: "fastapi"
+
+  # Node.js frameworks
+  express: "nestjs"
+  koa: "nestjs"
+  hapi: "nestjs"
+
+  # Go frameworks
+  gin: "go"
+  echo: "go"
+  fiber: "go"
+
+  # Java frameworks
+  quarkus: "spring-boot"
+  micronaut: "spring-boot"
+  dropwizard: "spring-boot"
+
+  # Frontend frameworks
+  react: "nextjs"
+  angular: "nextjs"
+  svelte: "nextjs"
+  solid: "nextjs"
+  vue: "vue3-nuxt"
+  nuxt: "vue3-nuxt"
+
+  # Mobile
+  flutter: "react-native"
+  ionic: "react-native"
+  xamarin: "react-native"
+
+  # Ruby
+  rails: "spring-boot"
+  sinatra: "fastapi"
+
+# Stack categories for smart fallback
+categories:
+  python-backend:
+    - "fastapi"
+    - "django"
+
+  typescript-backend:
+    - "nestjs"
+
+  go-backend:
+    - "go"
+
+  java-backend:
+    - "spring-boot"
+
+  frontend:
+    - "nextjs"
+    - "vue3-nuxt"
+
+  mobile:
+    - "react-native"
+
+# Validation behavior
+validationBehavior:
+  onInvalidStack: "fallback"  # Options: "error", "fallback", "generic"
+  notifyUser: true             # Log warning when fallback used
+  allowGeneric: true           # Allow generic stack as last resort
+
+# Keywords for stack detection (used by Orchestrator Agent)
+stackKeywords:
+  fastapi:
+    - "fastapi"
+    - "async python"
+    - "pydantic"
+    - "uvicorn"
+
+  django:
+    - "django"
+    - "orm"
+    - "admin panel"
+    - "django rest framework"
+    - "drf"
+
+  go:
+    - "golang"
+    - "go"
+    - "goroutine"
+    - "gin"
+    - "echo"
+
+  nestjs:
+    - "nestjs"
+    - "nest"
+    - "typescript backend"
+    - "dependency injection"
+
+  nextjs:
+    - "nextjs"
+    - "next.js"
+    - "react ssr"
+    - "vercel"
+
+  vue3-nuxt:
+    - "vue"
+    - "vue3"
+    - "nuxt"
+    - "nuxt3"
+    - "composition api"
+
+  spring-boot:
+    - "spring"
+    - "spring boot"
+    - "java"
+    - "maven"
+    - "gradle"
+
+  react-native:
+    - "react native"
+    - "mobile"
+    - "ios"
+    - "android"
+    - "expo"
+
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Validation Protocol
+
+> **AI instruction**: Load this file during initialization to validate STACK_ID and apply fallback if needed.
+
+## Validation Flow
+
+1. **Check STACK_ID**: Is it in `validStacks`?
+   - ✅ Yes → Continue with selected stack
+   - ❌ No → Go to step 2
+
+2. **Check Fallback Mapping**: Is STACK_ID in `fallbackMapping`?
+   - ✅ Yes → Use mapped stack, log warning
+   - ❌ No → Go to step 3
+
+3. **Use Generic Stack**: Load `agents-stack/generic/`
+   - Log: "Stack '{STACK_ID}' not supported. Using generic rules."
+
+## Example Scenarios
+
+```yaml
+# Scenario 1: Valid stack
+STACK_ID: "fastapi"
+→ ✅ Use agents-stack/fastapi/
+
+# Scenario 2: Fallback available
+STACK_ID: "flask"
+→ ⚠️  Fallback to "fastapi"
+→ ✅ Use agents-stack/fastapi/
+→ 📝 Log: "flask not supported, using fastapi fallback"
+
+# Scenario 3: No fallback, use generic
+STACK_ID: "php-laravel"
+→ ⚠️  No fallback available
+→ ✅ Use agents-stack/generic/
+→ 📝 Log: "php-laravel not supported, using generic rules"
+```
+
+## User Notification Format
+
+When fallback is used, notify user:
+```
+⚠️  Stack Warning:
+   Requested: {original_stack}
+   Not available in agents-stack/
+   Using fallback: {fallback_stack}
+
+   To add {original_stack} support:
+   1. Create agents-stack/{original_stack}/
+   2. Add agentsrules, techProfile.md, patternProfile.md, automation.md
+   3. Restart agent
+```
+
+## Never Fail Strategy
+
+System NEVER throws error for invalid stack:
+- Try validated stack → Try fallback → Use generic → Always succeed

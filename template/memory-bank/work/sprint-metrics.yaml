@@ -1,0 +1,26 @@
+---
+# Sprint Metrics — Performance Tracking
+version: "1.0"
+
+currentSprint:
+  id: ""
+  planned: 0
+  completed: 0
+  inProgress: 0
+  blocked: 0
+
+velocity:
+  lastSprint: 0
+  average: 0
+  trend: "stable"
+
+qualityTrend:
+  coverage: []
+  bugs: []
+  violations: []
+
+tokenUsage: []
+
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

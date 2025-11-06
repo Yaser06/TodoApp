@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "timestamp": "",
+  "reason": "",
+  "tokenUsage": {
+    "total": 0,
+    "percentage": 0,
+    "mode": "standard"
+  },
+  "state": {
+    "completedTasks": [],
+    "inProgress": "",
+    "backlogSnapshot": [],
+    "currentPhase": ""
+  },
+  "context": {
+    "STACK_ID": "",
+    "currentSprint": "",
+    "activeObjective": ""
+  },
+  "nextSteps": [],
+  "resumeInstructions": "",
+  "deltaChanges": [],
+  "notes": "This file is automatically managed. Empty state indicates no active checkpoint."
+}

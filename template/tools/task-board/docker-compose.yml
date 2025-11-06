@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  task-board:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: task-board
+    ports:
+      # Try multiple ports (Docker will use first available)
+      - "9090-9099:9090"
+    volumes:
+      # Mount backlog.yaml from memory-bank
+      - ../../memory-bank/work:/app/data:rw
+    environment:
+      - PORT_RANGE=9090-9099
+      - BACKLOG_PATH=/app/data/backlog.yaml
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - task-board-network
+
+networks:
+  task-board-network:
+    driver: bridge

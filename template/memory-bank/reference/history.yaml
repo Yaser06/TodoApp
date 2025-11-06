@@ -1,0 +1,20 @@
+---
+# Historical Data — Cold Data
+version: "1.0"
+loadOnDemand: true
+
+completedSprints: []
+
+lessons: []
+
+followUps: []
+
+riskLog: []
+
+decisionLog: []
+
+# Metadata
+sourceFile: "progress.md + archived sprints"
+updatedAt: "2025-10-30"
+updatedBy: "@agent"
+---

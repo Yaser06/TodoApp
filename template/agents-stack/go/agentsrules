@@ -1,0 +1,36 @@
+---
+tier1:
+  - "Use Go 1.22+ with standard library net/http and new ServeMux router features"
+  - "Apply Clean Architecture: separate handlers, services, repositories, and domain models"
+  - "Always check and handle errors explicitly; use wrapped errors for traceability (fmt.Errorf with %w)"
+  - "No global state; use constructor-based dependency injection with interfaces"
+  - "Leave NO todos, placeholders, or missing pieces in implementation"
+  - "Context propagation required for all request lifecycles (context.Context as first parameter)"
+tier2:
+  - "Prioritize interface-driven development with explicit dependency injection"
+  - "Follow RESTful principles with proper HTTP status codes and JSON response formatting"
+  - "Implement rigorous input validation at endpoint level"
+  - "Use table-driven tests with parallel execution (t.Parallel())"
+  - "Structured logging with JSON format; include trace IDs for correlation"
+  - "Middleware for cross-cutting concerns (logging, authentication, rate limiting)"
+tier3:
+  - "Favor composition over inheritance; use small, purpose-specific interfaces"
+  - "Write focused functions with single responsibility (< 50 lines recommended)"
+  - "Integrate OpenTelemetry for distributed tracing, metrics, and observability"
+  - "Code quality enforcement with golangci-lint"
+  - "Health check endpoints: /health (liveness), /ready (readiness)"
+  - "API versioning with /api/v1/ prefix pattern"
+updatedAt: "2025-10-31"
+updatedBy: "@agent"
+---
+
+# Stack Rules — Go
+
+Go microservices and API development rules. Emphasizes Clean Architecture, explicit error handling, and production-ready observability.
+
+## Key Principles
+
+- **Standard Library First**: Leverage Go 1.22+ net/http before reaching for frameworks
+- **Explicit Over Implicit**: No magic, clear error handling, obvious dependencies
+- **Interface-Driven**: Small interfaces enable testability and composition
+- **Observability Built-In**: Tracing, metrics, and structured logging from day one

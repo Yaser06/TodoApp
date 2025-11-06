@@ -1,0 +1,17 @@
+# Example Task Backlog for Task Board Testing
+# This is just an example file - the real backlog is in template/memory-bank/work/backlog.yaml
+
+backlog: []
+
+inProgress: []
+
+blocked: []
+
+done: []
+
+# Batch Update Control
+flushThreshold: 10
+pendingChanges: 0
+
+updatedAt: "2025-11-01"
+updatedBy: "@agent"

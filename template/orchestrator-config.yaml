@@ -1,0 +1,137 @@
+# Orchestrator Configuration
+# Controls how multi-agent orchestration works
+
+# Agent Auto-Assignment Settings
+agent_assignment:
+  # Auto-assign agents to these task types (set to false to disable)
+  setup:
+    enabled: true
+    description: "Setup and infrastructure tasks (DB, Redis, etc.)"
+
+  development:
+    enabled: true
+    description: "Code implementation tasks (APIs, features, etc.)"
+
+  testing:
+    enabled: true
+    description: "Test writing and execution tasks"
+
+  security:
+    enabled: true
+    description: "Security audits and vulnerability scanning"
+
+  documentation:
+    enabled: true
+    description: "Documentation writing tasks"
+
+  review:
+    enabled: true  # ← You can disable auto-review, do it manually
+    description: "Code review and PR approval"
+
+# Agent Pool Settings
+agent_pool:
+  # Auto-calculate optimal agent count (recommended)
+  auto_calculate: true
+
+  # Or manually set min/max agents
+  min_agents: 2
+  max_agents: 8
+
+  # Agent utilization target (0.6 = 60% utilization)
+  target_utilization: 0.6
+
+# Git Settings
+git:
+  # Use Git branches (REQUIRED for multi-agent to avoid conflicts)
+  # Even if you don't push to remote, branches are needed for isolation
+  use_branches: true  # ← Always true for multi-agent
+
+  # Push to remote (set to false for local-only, no GitHub needed)
+  push_to_remote: true  # ← Set to false to work locally without GitHub
+
+  # Default branch for PRs
+  main_branch: "main"
+
+  # Branch naming pattern
+  # Available variables: {agent_id}, {task_id}
+  branch_pattern: "{agent_id}/task-{task_id}"
+
+  # Auto-create PRs (only if push_to_remote=true)
+  auto_pr: true
+
+  # PR auto-merge settings (Production-ready merge coordinator)
+  auto_merge:
+    enabled: true  # Auto-merge with conflict resolution & quality gates
+    require_review: false  # Set to true for manual review before merge
+    require_tests_pass: true  # Always run tests before merge
+
+# Quality Gates
+quality_gates:
+  # Run tests before PR creation
+  run_tests: true
+
+  # Lint code before PR
+  run_linter: true
+
+  # Required checks
+  checks:
+    - name: "Tests Pass"
+      command: "npm test"
+      required: true
+
+    - name: "Linter Pass"
+      command: "npm run lint"
+      required: true
+
+    - name: "Build Success"
+      command: "npm run build"
+      required: false
+
+# Phase Management
+phases:
+  # Auto-advance to next phase when current phase complete
+  auto_advance: true
+
+  # Wait time before advancing (seconds)
+  advance_delay: 5
+
+# Redis Settings
+redis:
+  host: "localhost"
+  port: 6379
+  db: 0
+
+  # Task lock TTL (seconds) - prevents zombie locks
+  # Fix #7: Should be ~2x agent_timeout for proper cleanup
+  task_lock_ttl: 600  # 10 minutes (2x agent_timeout)
+
+  # Heartbeat interval (seconds)
+  heartbeat_interval: 30
+
+  # Agent timeout (seconds) - agent considered dead if no heartbeat
+  agent_timeout: 300  # 5 minutes
+
+# Monitoring
+monitoring:
+  # Enable task board
+  task_board_enabled: true
+  task_board_port: 9090
+
+  # Log level (DEBUG, INFO, WARNING, ERROR)
+  log_level: "INFO"
+
+  # Save execution logs
+  save_logs: true
+  logs_dir: ".orchestrator/logs"
+
+# Advanced Settings
+advanced:
+  # Retry failed tasks
+  retry_failed_tasks: true
+  max_retries: 3
+
+  # Parallel PR reviews
+  parallel_reviews: true
+
+  # Token budget per agent (0 = unlimited)
+  token_budget_per_agent: 0

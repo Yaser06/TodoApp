@@ -1,0 +1,42 @@
+{
+  "version": "1.0",
+  "lastFullSync": "",
+  "changes": [],
+  "pendingWrites": {
+    "taskBoard": [],
+    "progress": [],
+    "deliverables": [],
+    "activeContext": []
+  },
+  "usage": {
+    "totalChanges": 0,
+    "lastFlush": "",
+    "flushThreshold": 10
+  },
+  "instructions": {
+    "purpose": "Track incremental changes without full file rewrites",
+    "flushTriggers": [
+      "Every 10 changes",
+      "Task completion",
+      "Session closure",
+      "Token critical threshold"
+    ],
+    "changeFormat": {
+      "timestamp": "ISO 8601",
+      "file": "filename without path",
+      "operation": "add | update | delete | move",
+      "field": "YAML path (e.g., backlog[2].status)",
+      "oldValue": "previous value (for update/delete)",
+      "newValue": "new value (for add/update)"
+    },
+    "example": {
+      "timestamp": "2025-10-30T10:15:00Z",
+      "file": "taskBoard",
+      "operation": "move",
+      "field": "backlog[0]",
+      "oldValue": "inProgress",
+      "newValue": "done",
+      "taskId": "T001"
+    }
+  }
+}
