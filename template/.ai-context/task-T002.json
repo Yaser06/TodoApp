@@ -1,20 +1,20 @@
 {
   "task": {
-    "acceptanceCriteria": "Folders created|Config files added|README updated",
+    "acceptanceCriteria": "Database connected|Schema created|Migrations setup",
     "assigned_to": "ai-agent-1",
     "dependencies": [],
-    "description": "Initialize project with basic folder structure and configuration",
-    "id": "T001",
+    "description": "Configure database connection and create initial schema",
+    "id": "T002",
     "pri": "H",
     "source": "ai",
-    "started_at": "2025-11-08T20:59:00.012689",
+    "started_at": "2025-11-08T20:57:13.313750",
     "status": "in_progress",
-    "title": "Setup project structure",
+    "title": "Setup database",
     "type": "setup"
   },
   "role": "setup-specialist",
   "context": {
     "runbook": "---\nexecutionPolicy:\n  retryOnFailure: 3\n  retryDelay: \"5s\"\n  stopOnError: true\n  captureOutput: true\n  logFailures: \"progress.md\"\nsetup:\n  - name: \"Install dependencies\"\n    description: \"Install project dependencies for the selected stack\"\n    command: \"\"\n  - name: \"Bootstrap environment\"\n    description: \"Prepare environment variables, secrets, and tooling\"\n    command: \"\"\ndev:\n  - name: \"Start full platform (single command)\"\n    command: \"./tools/start_all.sh\"\n  - name: \"Start development server\"\n    command: \"\"\n  - name: \"Run watcher tests\"\n    command: \"\"\ntest:\n  - name: \"Unit tests\"\n    command: \"\"\n  - name: \"Integration tests\"\n    command: \"\"\n  - name: \"Static analysis\"\n    command: \"\"\nbuild:\n  - name: \"Build artifacts\"\n    command: \"\"\n  - name: \"Package application\"\n    command: \"\"\ndeploy:\n  - name: \"Deploy to staging\"\n    command: \"\"\n  - name: \"Deploy to production\"\n    command: \"\"\nqualityGates:\n  testCoverageTarget: 80\n  lintRequired: true\n  securityScan: true\n  additionalChecks: []\nmonitoring:\n  - metric: \"uptime\"\n    target: \"99.9%\"\n  - metric: \"error_rate\"\n    target: \"< 1%\"\nautoTasks:\n  - trigger: \"post-commit\"\n    actions:\n      - \"run tests\"\n      - \"update progress log\"\nupdatedAt: \"2025-10-30\"\nupdatedBy: \"@agent\"\n---\n\n# Automation Runbook \u2014 Command Execution\n\n> **AI instruction**: Merge with stack automation. Empty commands auto-filled from stack profile. Execute sequentially: setup \u2192 dev \u2192 test \u2192 build \u2192 deploy.\n"
   },
-  "started_at": "2025-11-08T23:59:01.983307"
+  "started_at": "2025-11-08T23:57:15.556650"
 }

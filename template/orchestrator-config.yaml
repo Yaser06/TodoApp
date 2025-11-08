@@ -63,7 +63,7 @@ git:
   use_branches: true  # ← Always true for multi-agent
 
   # Push to remote (set to false for local-only, no GitHub needed)
-  push_to_remote: false  # ← Local-only mode, no GitHub auth needed
+  push_to_remote: true  # ← Push to GitHub
 
   # Default branch for PRs
   main_branch: "multi-agent"
@@ -73,7 +73,7 @@ git:
   branch_pattern: "{agent_id}/task-{task_id}"
 
   # Auto-create PRs (only if push_to_remote=true)
-  auto_pr: false  # ← Disabled for local-only mode
+  auto_pr: true  # ← Auto create PRs
 
   # PR auto-merge settings (Production-ready merge coordinator)
   auto_merge:

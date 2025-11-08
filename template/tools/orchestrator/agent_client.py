@@ -315,8 +315,43 @@ class AIAgentClient:
             return False, None, None
 
     def git_checkout_main(self):
-        """Checkout main branch"""
+        """Checkout main branch safely"""
         main_branch = self.config['git']['main_branch']
+
+        # Check current branch
+        result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=self.project_root,
+            capture_output=True,
+            text=True
+        )
+        current_branch = result.stdout.strip()
+
+        # Already on main branch
+        if current_branch == main_branch:
+            return
+
+        # Check for uncommitted changes
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=self.project_root,
+            capture_output=True,
+            text=True
+        )
+
+        has_changes = bool(result.stdout.strip())
+
+        if has_changes:
+            # Stash changes before checkout
+            print(f"⚠️  Uncommitted changes detected, stashing...")
+            subprocess.run(
+                ["git", "stash", "push", "-m", f"Auto-stash before agent start"],
+                cwd=self.project_root,
+                check=True,
+                capture_output=True
+            )
+
+        # Now safe to checkout
         subprocess.run(
             ["git", "checkout", main_branch],
             cwd=self.project_root,
@@ -338,13 +373,33 @@ class AIAgentClient:
             print(f"⚠️  Could not pull from remote (this is ok in local mode)")
 
     def git_create_branch(self, branch_name):
-        """Create and checkout new Git branch"""
-        subprocess.run(
-            ["git", "checkout", "-b", branch_name],
+        """Create and checkout Git branch (or checkout if exists)"""
+        # Check if branch exists
+        result = subprocess.run(
+            ["git", "rev-parse", "--verify", branch_name],
             cwd=self.project_root,
-            check=True,
             capture_output=True
         )
+
+        branch_exists = (result.returncode == 0)
+
+        if branch_exists:
+            # Branch exists, just checkout
+            print(f"   Branch {branch_name} exists, checking out...")
+            subprocess.run(
+                ["git", "checkout", branch_name],
+                cwd=self.project_root,
+                check=True,
+                capture_output=True
+            )
+        else:
+            # Create new branch
+            subprocess.run(
+                ["git", "checkout", "-b", branch_name],
+                cwd=self.project_root,
+                check=True,
+                capture_output=True
+            )
 
     def git_commit(self, task_id, task_title):
         """Commit all changes"""
