@@ -63,7 +63,7 @@ git:
   use_branches: true  # ← Always true for multi-agent
 
   # Push to remote (set to false for local-only, no GitHub needed)
-  push_to_remote: true  # ← Set to false to work locally without GitHub
+  push_to_remote: false  # ← Local-only mode, no GitHub auth needed
 
   # Default branch for PRs
   main_branch: "multi-agent"
@@ -73,7 +73,7 @@ git:
   branch_pattern: "{agent_id}/task-{task_id}"
 
   # Auto-create PRs (only if push_to_remote=true)
-  auto_pr: true
+  auto_pr: false  # ← Disabled for local-only mode
 
   # PR auto-merge settings (Production-ready merge coordinator)
   auto_merge:
@@ -119,13 +119,13 @@ redis:
 
   # Task lock TTL (seconds) - prevents zombie locks
   # Fix #7: Should be ~2x agent_timeout for proper cleanup
-  task_lock_ttl: 600  # 10 minutes (2x agent_timeout)
+  task_lock_ttl: 120  # 2 minutes (2x agent_timeout of 60s)
 
   # Heartbeat interval (seconds)
-  heartbeat_interval: 30
+  heartbeat_interval: 15  # More frequent heartbeats
 
   # Agent timeout (seconds) - agent considered dead if no heartbeat
-  agent_timeout: 300  # 5 minutes
+  agent_timeout: 60  # 1 minute (more aggressive cleanup)
 
 # Monitoring
 monitoring:

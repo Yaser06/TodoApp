@@ -193,8 +193,11 @@ def recover_stuck_tasks(redis_client, config):
             logger.info(f"   ♻️  Recovering stuck task {task_id} (agent {assigned_to} is dead)")
             task['status'] = 'pending'
             task['assigned_to'] = None
+            # Remove timing fields so task can be reassigned
             if 'started_at' in task:
                 del task['started_at']
+            if 'completed_at' in task:
+                del task['completed_at']
             redis_client.hset(tasks_key, task_id, json.dumps(task))
             recovered_count += 1
 
@@ -203,6 +206,9 @@ def recover_stuck_tasks(redis_client, config):
             logger.info(f"   🔁 Resetting failed task {task_id} to pending (retry enabled)")
             task['status'] = 'pending'
             task['assigned_to'] = None
+            # Remove timing and error fields
+            if 'started_at' in task:
+                del task['started_at']
             if 'completed_at' in task:
                 del task['completed_at']
             if 'error' in task:

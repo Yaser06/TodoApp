@@ -347,10 +347,11 @@ def complete_task():
     status_icon = "✅" if success else "❌"
     logger.info(f"{status_icon} Task {task_id} completed by {agent_id} (success: {success})")
 
-    # Queue for merge (if auto-merge enabled and PR was created)
+    # Queue for merge (if auto-merge enabled)
     merge_coordinator = app.config.get('MERGE_COORDINATOR')
-    if merge_coordinator and success and pr_url and branch_name:
-        queue_pos = merge_coordinator.queue_merge(task_id, pr_url, branch_name, agent_id)
+    if merge_coordinator and success and branch_name:
+        # pr_url can be None for local-only mode (push_to_remote=false)
+        queue_pos = merge_coordinator.queue_merge(task_id, pr_url or "local", branch_name, agent_id)
         logger.info(f"🔀 Task {task_id} queued for merge (position: {queue_pos})")
 
     # Note: Phase advancement happens after successful merge, not here
@@ -575,13 +576,13 @@ def dead_agent_cleanup_service():
     """
     Background service that cleans up task locks from dead agents
 
-    Runs every 60 seconds and checks for agents that haven't sent
+    Runs every 30 seconds and checks for agents that haven't sent
     heartbeat in agent_timeout seconds. Releases their task locks.
     """
     logger.info("🧹 Dead agent cleanup service started")
 
     agent_timeout = CONFIG['redis']['agent_timeout']
-    cleanup_interval = 60  # Check every minute
+    cleanup_interval = 30  # Check every 30 seconds (more aggressive)
 
     while True:
         try:
@@ -630,6 +631,11 @@ def dead_agent_cleanup_service():
                                     task = json.loads(task_json)
                                     task['status'] = 'pending'
                                     task['assigned_to'] = None
+                                    # Remove timing fields so task can be reassigned
+                                    if 'started_at' in task:
+                                        del task['started_at']
+                                    if 'completed_at' in task:
+                                        del task['completed_at']
                                     r.hset(TASKS_KEY, current_task, json.dumps(task))
                                     logger.info(f"   ♻️  Reset task {current_task} to pending")
                                     cleaned_count += 1
