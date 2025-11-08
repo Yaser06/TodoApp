@@ -69,6 +69,8 @@ blocked: []
 
 done: []
 
+# Note: System was reset on 2025-11-07, all tasks back to backlog
+
 # Sprint Planning (optional, Agent uses this)
 sprintSchedule:
   - id: ""

@@ -29,6 +29,10 @@ class AIAgentClient:
         # Fix #2: Redis client for notifications
         self.redis_client = None
         self.notification_thread = None
+        # Fix #21: AI tool detection and auto-implementation
+        self.ai_tool = None
+        self.auto_implement = False
+        self.auto_commit = False
 
     def run(self):
         """Main agent loop"""
@@ -38,6 +42,21 @@ class AIAgentClient:
             # 1. Register with orchestrator
             self.agent_id, self.config = self.register()
             print(f"✅ Registered as: {self.agent_id}")
+
+            # Fix #21: Initialize auto-implementation settings
+            self.auto_implement = self.config.get('agent', {}).get('auto_implement', False)
+            self.auto_commit = self.config.get('agent', {}).get('auto_commit', True)
+
+            if self.auto_implement:
+                self.ai_tool = self.detect_ai_tool()
+                if self.ai_tool:
+                    print(f"🤖 AI Tool detected: {self.ai_tool}")
+                    print(f"✅ FULLY AUTOMATIC MODE - Agent will auto-implement tasks")
+                else:
+                    print(f"⚠️  No AI tool detected, falling back to manual mode")
+                    self.auto_implement = False
+            else:
+                print(f"📝 MANUAL MODE - You will implement tasks")
 
             # Fix #2: Start notification listener
             self.start_notification_listener()
@@ -201,31 +220,54 @@ class AIAgentClient:
             print(f"💻 Preparing workspace for {task_id}...")
             self.prepare_task_workspace(task, role)
 
-            # 6. Wait for implementation (USER implements with their AI tool)
-            print(f"\n" + "="*60)
-            print(f"🎯 READY TO IMPLEMENT")
-            print(f"="*60)
-            print(f"Task: {task['title']}")
-            print(f"Type: {task.get('type', 'development')}")
-            print(f"")
-            print(f"📋 What to do:")
-            print(f"   1. Read: CURRENT_TASK.md (workspace context)")
-            print(f"   2. Implement the feature (use your AI tool)")
-            print(f"   3. Write tests")
-            print(f"   4. Commit changes: git add . && git commit -m 'Implement {task_id}'")
-            print(f"")
-            print(f"💡 The agent will automatically detect your commit and continue...")
-            print(f"="*60)
-            print(f"")
+            # 6. Implementation: Auto or Manual (Fix #21)
+            implementation_success = False
 
-            # Wait for implementation (detect commits)
-            implementation_success = self.wait_for_implementation(task_id, branch_name)
+            if self.auto_implement and self.ai_tool:
+                # FULLY AUTOMATIC MODE
+                print(f"\n" + "="*60)
+                print(f"🤖 AUTO-IMPLEMENTING")
+                print(f"="*60)
+                print(f"Task: {task['title']}")
+                print(f"AI Tool: {self.ai_tool}")
+                print(f"")
+                print(f"✨ Agent is implementing automatically...")
+                print(f"="*60)
+                print(f"")
 
-            # Check if implementation was committed
+                # Auto-implement with detected AI tool
+                implementation_success = self.auto_implement_task(task)
+
+                if not implementation_success:
+                    print(f"❌ Auto-implementation failed")
+                    print(f"💡 Falling back to manual mode...")
+
             if not implementation_success:
-                print(f"❌ Implementation timeout - no commit detected")
-                print(f"💡 Task can be re-attempted later")
-                return False, None, branch_name
+                # MANUAL MODE
+                print(f"\n" + "="*60)
+                print(f"🎯 READY TO IMPLEMENT (Manual Mode)")
+                print(f"="*60)
+                print(f"Task: {task['title']}")
+                print(f"Type: {task.get('type', 'development')}")
+                print(f"")
+                print(f"📋 What to do:")
+                print(f"   1. Read: CURRENT_TASK.md (workspace context)")
+                print(f"   2. Implement the feature (use your AI tool)")
+                print(f"   3. Write tests")
+                print(f"   4. Commit changes: git add . && git commit -m 'Implement {task_id}'")
+                print(f"")
+                print(f"💡 The agent will automatically detect your commit and continue...")
+                print(f"="*60)
+                print(f"")
+
+                # Wait for manual implementation (detect commits)
+                implementation_success = self.wait_for_implementation(task_id, branch_name)
+
+                # Check if implementation was committed
+                if not implementation_success:
+                    print(f"❌ Implementation timeout - no commit detected")
+                    print(f"💡 Task can be re-attempted later")
+                    return False, None, branch_name
 
             # 6. Run quality gates
             if self.config['quality_gates']['run_tests']:
@@ -330,11 +372,21 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
 
     def git_push(self, branch_name):
         """Push branch to remote"""
-        subprocess.run(
-            ["git", "push", "-u", "origin", branch_name],
-            cwd=self.project_root,
-            check=True
-        )
+        try:
+            result = subprocess.run(
+                ["git", "push", "-u", "origin", branch_name],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            if result.stdout:
+                print(f"   {result.stdout.strip()}")
+            print(f"✅ Pushed to remote: origin/{branch_name}")
+        except subprocess.CalledProcessError as e:
+            error_msg = e.stderr.strip() if e.stderr else str(e)
+            print(f"❌ Git push failed: {error_msg}")
+            raise
 
     def check_gh_cli(self):
         """
@@ -520,6 +572,379 @@ git commit -m "feat: {task['title']} ({task_id})"
             'started_at': datetime.now().isoformat()
         }, indent=2))
         print(f"   ✓ Created: .ai-context/task-{task_id}.json")
+
+    def detect_ai_tool(self):
+        """
+        Detect which AI tool is available (Fix #21)
+
+        Returns: str - AI tool name or None
+        """
+        import shutil
+
+        # Claude Code detection
+        if shutil.which('claude'):
+            try:
+                result = subprocess.run(
+                    ['claude', '--version'],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    return 'claude-code'
+            except Exception:
+                pass
+
+        # Cursor detection (check if running in Cursor terminal)
+        if os.environ.get('TERM_PROGRAM') == 'Cursor':
+            return 'cursor'
+
+        # Aider detection
+        if shutil.which('aider'):
+            return 'aider'
+
+        # GitHub Copilot CLI detection
+        if shutil.which('github-copilot-cli'):
+            return 'copilot-cli'
+
+        # Check for API keys in environment
+        if os.environ.get('ANTHROPIC_API_KEY'):
+            return 'claude-api'
+
+        if os.environ.get('OPENAI_API_KEY'):
+            return 'openai-api'
+
+        if os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY'):
+            return 'gemini-api'
+
+        return None
+
+    def auto_implement_task(self, task):
+        """
+        Automatically implement task using detected AI tool (Fix #21)
+
+        Args:
+            task: Task dict
+
+        Returns: bool - Success or failure
+        """
+        print(f"\n🤖 AUTO-IMPLEMENTING with {self.ai_tool}...")
+
+        task_id = task['id']
+
+        try:
+            if self.ai_tool == 'claude-code':
+                return self.implement_with_claude_code(task)
+
+            elif self.ai_tool == 'cursor':
+                return self.implement_with_cursor(task)
+
+            elif self.ai_tool == 'aider':
+                return self.implement_with_aider(task)
+
+            elif self.ai_tool == 'copilot-cli':
+                return self.implement_with_copilot(task)
+
+            elif self.ai_tool == 'claude-api':
+                return self.implement_with_claude_api(task)
+
+            elif self.ai_tool == 'openai-api':
+                return self.implement_with_openai_api(task)
+
+            elif self.ai_tool == 'gemini-api':
+                return self.implement_with_gemini_api(task)
+
+            else:
+                print(f"⚠️  Unknown AI tool: {self.ai_tool}")
+                return False
+
+        except Exception as e:
+            print(f"❌ Auto-implementation failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def auto_implement_fix(self, task_id, error_type='test_failure'):
+        """
+        Automatically fix errors using detected AI tool (Fix #22 - Auto-fix enhancement)
+
+        Reads FIX_TASK.md and asks AI tool to fix the issues.
+
+        Args:
+            task_id: Task ID that needs fixing
+            error_type: Type of error ('test_failure', 'merge_conflict', etc.)
+
+        Returns: bool - Success or failure
+        """
+        print(f"\n🤖 AUTO-FIXING with {self.ai_tool}...")
+        print(f"   📋 Reading FIX_TASK.md for error details...")
+
+        # Check if FIX_TASK.md exists
+        fix_file = self.project_root / "FIX_TASK.md"
+        if not fix_file.exists():
+            print(f"   ⚠️  FIX_TASK.md not found, cannot auto-fix")
+            return False
+
+        try:
+            # Call appropriate AI tool with fix prompt
+            if self.ai_tool == 'claude-code':
+                return self.fix_with_claude_code(task_id)
+
+            elif self.ai_tool in ['cursor', 'aider', 'copilot-cli']:
+                print(f"   ⚠️  Auto-fix not yet implemented for {self.ai_tool}")
+                print(f"   💡 Falling back to manual fix mode...")
+                return False
+
+            elif self.ai_tool in ['claude-api', 'openai-api', 'gemini-api']:
+                print(f"   ⚠️  Auto-fix not yet implemented for {self.ai_tool}")
+                print(f"   💡 Falling back to manual fix mode...")
+                return False
+
+            else:
+                print(f"   ⚠️  Unknown AI tool: {self.ai_tool}")
+                return False
+
+        except Exception as e:
+            print(f"   ❌ Auto-fix failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def fix_with_claude_code(self, task_id):
+        """Fix errors using Claude Code CLI"""
+        print(f"   🔧 Claude Code analyzing errors...")
+        print(f"   ⏳ This may take a few minutes...")
+
+        prompt = f"""Read FIX_TASK.md and fix all the errors described.
+
+Task: {task_id}
+
+IMPORTANT Instructions:
+1. Read FIX_TASK.md carefully to understand what failed
+2. Analyze the error messages and test output
+3. Identify the root cause of the failures
+4. Fix the code to resolve all issues
+5. Run tests locally to verify the fix works
+6. After fixing, commit your changes with message: "fix: {task_id} test failures"
+
+Work efficiently and minimize unnecessary tool calls. Focus on fixing the specific errors mentioned in FIX_TASK.md."""
+
+        try:
+            # Call Claude Code
+            print(f"   💭 Claude is analyzing and fixing...")
+            result = subprocess.run(
+                ['claude', 'code', prompt],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout
+            )
+
+            if result.returncode == 0:
+                print(f"   ✅ Claude Code completed fix")
+                # Show summary
+                if result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    if len(lines) > 10:
+                        print(f"   📝 Summary (last 5 lines):")
+                        for line in lines[-5:]:
+                            print(f"      {line}")
+                return True
+            else:
+                print(f"   ⚠️  Claude Code returned error")
+                if result.stderr:
+                    error_lines = result.stderr.strip().split('\n')[:5]
+                    for line in error_lines:
+                        print(f"      {line}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠️  Claude Code timeout (10 min)")
+            return False
+        except Exception as e:
+            print(f"   ❌ Claude Code error: {e}")
+            return False
+
+    def implement_with_claude_code(self, task):
+        """Implement task using Claude Code CLI"""
+        print(f"   Using Claude Code CLI...")
+        print(f"   🤖 Implementing: {task['title']}")
+        print(f"   ⏳ This may take a few minutes...")
+
+        prompt = f"""Read CURRENT_TASK.md and implement the task efficiently.
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Requirements:
+1. Implement the functionality described
+2. Write tests if needed
+3. Follow project patterns
+4. After implementing, commit your changes with a clear message
+
+IMPORTANT: Work efficiently and minimize unnecessary tool calls. The CURRENT_TASK.md file has all the details you need."""
+
+        try:
+            # Call Claude Code with minimal verbosity
+            print(f"   💭 Claude is thinking...")
+            result = subprocess.run(
+                ['claude', 'code', prompt],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout
+            )
+
+            if result.returncode == 0:
+                print(f"   ✅ Claude Code completed implementation")
+                # Show only last few lines of output (summary)
+                if result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    if len(lines) > 10:
+                        print(f"   📝 Summary (last 5 lines):")
+                        for line in lines[-5:]:
+                            print(f"      {line}")
+                return True
+            else:
+                print(f"   ⚠️  Claude Code returned error")
+                if result.stderr:
+                    # Show only first few lines of error
+                    error_lines = result.stderr.strip().split('\n')[:5]
+                    for line in error_lines:
+                        print(f"      {line}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠️  Claude Code timeout (10 min)")
+            return False
+        except Exception as e:
+            print(f"   ❌ Claude Code error: {e}")
+            return False
+
+    def implement_with_cursor(self, task):
+        """Implement task using Cursor (via API or file-based communication)"""
+        print(f"   Using Cursor...")
+        # Cursor doesn't have CLI, so we create a special file for it
+        # User should have Cursor AI chat open and monitoring
+
+        cursor_file = self.project_root / ".cursor-task"
+        cursor_file.write_text(f"""CURSOR AI: Please implement this task
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Read CURRENT_TASK.md for full details.
+
+After implementing, commit your changes:
+git add .
+git commit -m "feat: {task['title']} ({task['id']})"
+""")
+
+        print(f"   ✓ Created: .cursor-task")
+        print(f"   💡 Cursor AI should pick this up - check your Cursor chat")
+
+        # Since Cursor doesn't auto-commit, we wait for user's Cursor to commit
+        return True  # Return True to continue with commit detection
+
+    def implement_with_aider(self, task):
+        """Implement task using Aider"""
+        print(f"   Using Aider...")
+
+        prompt = f"""Implement this task:
+
+{task['title']}
+
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Read CURRENT_TASK.md for more details. Implement the functionality and commit when done."""
+
+        try:
+            result = subprocess.run(
+                ['aider', '--message', prompt, '--yes'],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=600
+            )
+
+            if result.returncode == 0:
+                print(f"✅ Aider completed implementation")
+                return True
+            else:
+                print(f"⚠️  Aider returned error")
+                return False
+
+        except Exception as e:
+            print(f"❌ Aider error: {e}")
+            return False
+
+    def implement_with_copilot(self, task):
+        """Implement task using GitHub Copilot CLI"""
+        print(f"   Using GitHub Copilot CLI...")
+        # Copilot CLI is mainly for commands, not full implementation
+        # Fall back to file-based approach
+        print(f"   ⚠️  Copilot CLI not suitable for full implementation")
+        print(f"   💡 Falling back to manual mode for this task")
+        return False
+
+    def implement_with_claude_api(self, task):
+        """Implement task using Claude API directly"""
+        print(f"   Using Claude API...")
+
+        api_key = os.environ.get('ANTHROPIC_API_KEY')
+        if not api_key:
+            print(f"⚠️  ANTHROPIC_API_KEY not set")
+            return False
+
+        try:
+            import anthropic
+
+            client = anthropic.Anthropic(api_key=api_key)
+
+            # Build prompt with context
+            prompt = f"""You are implementing a software task.
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Read CURRENT_TASK.md for full details.
+
+Use the available tools to:
+1. Read existing files
+2. Write new files
+3. Edit existing files
+4. Implement the functionality
+
+After implementing, summarize what you did."""
+
+            # This would need tools implementation (read_file, write_file, etc.)
+            # For now, simplified version
+            print(f"⚠️  Claude API direct implementation requires tools setup")
+            print(f"💡 Use Claude Code CLI instead for better results")
+            return False
+
+        except ImportError:
+            print(f"⚠️  anthropic package not installed: pip install anthropic")
+            return False
+        except Exception as e:
+            print(f"❌ Claude API error: {e}")
+            return False
+
+    def implement_with_openai_api(self, task):
+        """Implement task using OpenAI API"""
+        print(f"   Using OpenAI API...")
+        print(f"   ⚠️  OpenAI API implementation not yet available")
+        return False
+
+    def implement_with_gemini_api(self, task):
+        """Implement task using Google Gemini API"""
+        print(f"   Using Gemini API...")
+        print(f"   ⚠️  Gemini API implementation not yet available")
+        return False
 
     def prepare_fix_workspace(self, task_id, error_type, error_details):
         """
@@ -1034,21 +1459,42 @@ The agent will automatically detect your commit and continue.
             }
             self.prepare_fix_workspace(task_id, 'test_failure', error_details)
 
-            # 2. Print instructions
-            print(f"\n" + "="*60)
-            print(f"🎯 FIX MODE: Tests Failed")
-            print(f"="*60)
-            print(f"Task: {task_id}")
-            print(f"")
-            print(f"📋 What to do:")
-            print(f"   1. Read: FIX_TASK.md (error details)")
-            print(f"   2. Fix the failing tests (use your AI tool)")
-            print(f"   3. Run tests locally to verify")
-            print(f"   4. Commit: git add . && git commit -m 'fix: {task_id} test failures'")
-            print(f"")
-            print(f"💡 Agent will detect your fix commit and retry automatically...")
-            print(f"="*60)
-            print(f"")
+            # 2. Auto-fix or Manual Mode (Fix #22)
+            fix_attempted = False
+            if self.auto_implement and self.ai_tool:
+                # FULLY AUTOMATIC MODE - Auto-fix
+                print(f"\n" + "="*60)
+                print(f"🤖 AUTO-FIX MODE: Attempting automatic fix...")
+                print(f"="*60)
+                print(f"Task: {task_id}")
+                print(f"AI Tool: {self.ai_tool}")
+                print(f"")
+                print(f"✨ Agent will automatically fix and retry...")
+                print(f"="*60)
+                print(f"")
+
+                # Try to auto-fix
+                fix_attempted = self.auto_implement_fix(task_id, 'test_failure')
+
+                if not fix_attempted:
+                    print(f"⚠️  Auto-fix failed, falling back to manual mode...")
+
+            if not fix_attempted:
+                # MANUAL MODE - Print instructions
+                print(f"\n" + "="*60)
+                print(f"🎯 FIX MODE: Tests Failed (Manual)")
+                print(f"="*60)
+                print(f"Task: {task_id}")
+                print(f"")
+                print(f"📋 What to do:")
+                print(f"   1. Read: FIX_TASK.md (error details)")
+                print(f"   2. Fix the failing tests (use your AI tool)")
+                print(f"   3. Run tests locally to verify")
+                print(f"   4. Commit: git add . && git commit -m 'fix: {task_id} test failures'")
+                print(f"")
+                print(f"💡 Agent will detect your fix commit and retry automatically...")
+                print(f"="*60)
+                print(f"")
 
             # 3. Wait for fix commit
             fix_success = self.wait_for_fix(task_id, 'test_failure', max_retries=3)

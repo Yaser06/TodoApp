@@ -56,7 +56,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    command: python main.py
+    command: python tools/orchestrator/main.py
     restart: unless-stopped
     networks:
       - orchestrator-network

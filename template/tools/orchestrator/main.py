@@ -99,6 +99,40 @@ def health():
         }), 500
 
 
+@app.route('/cleanup', methods=['POST'])
+def cleanup_stuck_tasks():
+    """
+    Cleanup stuck tasks (Fix #23)
+
+    Recovers tasks that are:
+    - In-progress but agent is dead
+    - Failed but retry is enabled
+
+    Response:
+        {
+            "recovered": 2,
+            "failed_reset": 1,
+            "message": "Cleanup completed"
+        }
+    """
+    try:
+        from init import recover_stuck_tasks
+
+        logger.info("🧹 Manual cleanup requested via API")
+        recovered_count = recover_stuck_tasks(r, CONFIG)
+
+        return jsonify({
+            "recovered": recovered_count,
+            "message": "Cleanup completed successfully"
+        })
+    except Exception as e:
+        logger.error(f"❌ Cleanup failed: {e}")
+        return jsonify({
+            "error": str(e),
+            "message": "Cleanup failed"
+        }), 500
+
+
 @app.route('/agent/register', methods=['POST'])
 def register_agent():
     """

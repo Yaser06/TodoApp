@@ -40,6 +40,22 @@ agent_pool:
   # Agent utilization target (0.6 = 60% utilization)
   target_utilization: 0.6
 
+# Agent Behavior Settings
+agent:
+  # Auto-implement with AI tools (FULLY AUTOMATIC MODE)
+  # true = Agent detects AI tool (Claude Code, Cursor, etc.) and auto-implements
+  # false = Manual mode (you commit yourself)
+  auto_implement: true  # FULLY AUTOMATIC - AI tools auto-implement tasks
+
+  # Auto-commit after implementation
+  # Only used if auto_implement is true
+  auto_commit: true
+
+  # Note: When auto_implement is true, agent will also:
+  # - Automatically fix test failures (Fix #22)
+  # - Automatically retry up to max_retries times (see advanced.max_retries)
+  # - Fall back to manual mode if auto-fix fails
+
 # Git Settings
 git:
   # Use Git branches (REQUIRED for multi-agent to avoid conflicts)
@@ -50,7 +66,7 @@ git:
   push_to_remote: true  # ← Set to false to work locally without GitHub
 
   # Default branch for PRs
-  main_branch: "main"
+  main_branch: "multi-agent"
 
   # Branch naming pattern
   # Available variables: {agent_id}, {task_id}
@@ -126,7 +142,8 @@ monitoring:
 
 # Advanced Settings
 advanced:
-  # Retry failed tasks
+  # Retry failed tasks (Fix #23: Also used in startup recovery)
+  # If true, failed tasks will be reset to pending on orchestrator restart
   retry_failed_tasks: true
   max_retries: 3
 
@@ -135,3 +152,10 @@ advanced:
 
   # Token budget per agent (0 = unlimited)
   token_budget_per_agent: 0
+
+# Recovery System (Fix #23)
+# - On startup: Automatically detects and recovers stuck tasks
+# - Stuck task = in_progress but agent is dead
+# - Failed task = automatically reset to pending if retry_failed_tasks=true
+# - Use `./orchestrate.sh cleanup` to manually trigger recovery
+# - Use `./orchestrate.sh reset` for complete fresh start

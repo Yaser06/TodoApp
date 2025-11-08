@@ -146,14 +146,88 @@ def validate_backlog_tasks(tasks):
     logger.info(f"✅ Backlog validation passed ({len(tasks)} tasks)")
 
 
+def recover_stuck_tasks(redis_client, config):
+    """
+    Recover stuck tasks from previous sessions (Fix #23)
+
+    - Reset "in_progress" tasks from dead agents back to "pending"
+    - Optionally reset "failed" tasks back to "pending" if retry is enabled
+    - Keep "completed" tasks as-is
+
+    Returns: Number of tasks recovered
+    """
+    logger.info("🔄 Checking for stuck tasks...")
+
+    tasks_key = "orchestrator:tasks"
+    agents_key = "orchestrator:agents"
+    agent_timeout = config['redis'].get('agent_timeout', 300)
+    retry_failed = config['advanced'].get('retry_failed_tasks', True)
+
+    recovered_count = 0
+
+    # Get all tasks
+    all_tasks = redis_client.hgetall(tasks_key)
+
+    # Get all active agents
+    active_agents = set()
+    for agent_id in redis_client.hkeys(agents_key):
+        agent_data_str = redis_client.hget(agents_key, agent_id)
+        if agent_data_str:
+            agent_data = json.loads(agent_data_str)
+            last_heartbeat = datetime.fromisoformat(agent_data.get('last_heartbeat', '2000-01-01'))
+            time_since_heartbeat = (datetime.now() - last_heartbeat).total_seconds()
+
+            if time_since_heartbeat < agent_timeout:
+                active_agents.add(agent_id)
+
+    logger.info(f"   Active agents: {len(active_agents)}")
+
+    # Check each task
+    for task_id, task_json in all_tasks.items():
+        task = json.loads(task_json)
+        status = task.get('status')
+        assigned_to = task.get('assigned_to')
+
+        # Case 1: In-progress but agent is dead
+        if status == 'in_progress' and assigned_to and assigned_to not in active_agents:
+            logger.info(f"   ♻️  Recovering stuck task {task_id} (agent {assigned_to} is dead)")
+            task['status'] = 'pending'
+            task['assigned_to'] = None
+            if 'started_at' in task:
+                del task['started_at']
+            redis_client.hset(tasks_key, task_id, json.dumps(task))
+            recovered_count += 1
+
+        # Case 2: Failed but retry is enabled
+        elif status == 'failed' and retry_failed:
+            logger.info(f"   🔁 Resetting failed task {task_id} to pending (retry enabled)")
+            task['status'] = 'pending'
+            task['assigned_to'] = None
+            if 'completed_at' in task:
+                del task['completed_at']
+            if 'error' in task:
+                del task['error']
+            redis_client.hset(tasks_key, task_id, json.dumps(task))
+            recovered_count += 1
+
+    if recovered_count > 0:
+        logger.info(f"✅ Recovered {recovered_count} stuck tasks")
+    else:
+        logger.info(f"✅ No stuck tasks found")
+
+    return recovered_count
+
+
 def initialize_orchestrator(redis_client, config):
     """
     Initialize orchestrator state
 
-    1. Load backlog from memory-bank/work/backlog.yaml
-    2. Calculate dependency graph
-    3. Determine execution phases
-    4. Store in Redis
+    1. Check if Redis has existing state (restart vs fresh start)
+    2. Load backlog from memory-bank/work/backlog.yaml
+    3. Recover stuck tasks (Fix #23)
+    4. Calculate dependency graph
+    5. Determine execution phases
+    6. Store in Redis
     """
     logger.info("📋 Initializing orchestrator...")
 
@@ -185,19 +259,43 @@ def initialize_orchestrator(redis_client, config):
 
     logger.info(f"📦 Loaded {len(tasks)} tasks from backlog")
 
+    # Fix #23: Check if Redis has existing tasks (restart scenario)
+    existing_tasks = redis_client.hgetall("orchestrator:tasks")
+
+    if existing_tasks:
+        logger.info(f"🔄 Found existing state in Redis ({len(existing_tasks)} tasks)")
+        logger.info(f"   This is a restart/recovery scenario")
+
+        # Recover stuck tasks
+        recovered_count = recover_stuck_tasks(redis_client, config)
+
+        # Verify all backlog tasks are in Redis
+        for task in tasks:
+            if task['id'] not in existing_tasks:
+                logger.info(f"   ➕ Adding new task from backlog: {task['id']}")
+                task['status'] = 'pending'
+                task['assigned_to'] = None
+                redis_client.hset(
+                    "orchestrator:tasks",
+                    task['id'],
+                    json.dumps(task)
+                )
+    else:
+        logger.info(f"🆕 No existing state found, initializing from scratch")
+
+        # Store tasks in Redis (fresh start)
+        for task in tasks:
+            task['status'] = 'pending'
+            task['assigned_to'] = None
+            redis_client.hset(
+                "orchestrator:tasks",
+                task['id'],
+                json.dumps(task)
+            )
+
     # Calculate phases
     phases = calculate_phases(tasks)
     logger.info(f"📊 Calculated {len(phases)} execution phases")
-
-    # Store tasks in Redis
-    for task in tasks:
-        task['status'] = 'pending'
-        task['assigned_to'] = None
-        redis_client.hset(
-            "orchestrator:tasks",
-            task['id'],
-            json.dumps(task)
-        )
 
     # Store phases in Redis
     redis_client.set("orchestrator:phases", json.dumps(phases))

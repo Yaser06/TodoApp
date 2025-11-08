@@ -118,10 +118,35 @@ run_agent() {
         exit 1
     fi
 
-    # Install required Python packages if needed
-    if ! python3 -c "import requests" 2>/dev/null; then
-        echo -e "${YELLOW}📦 Installing required Python packages...${NC}"
-        pip3 install requests pyyaml > /dev/null 2>&1
+    # Create virtual environment if needed
+    VENV_DIR="$PROJECT_ROOT/.venv"
+    if [ ! -d "$VENV_DIR" ]; then
+        echo -e "${YELLOW}🐍 Creating Python virtual environment...${NC}"
+        python3 -m venv "$VENV_DIR"
+    fi
+
+    # Activate virtual environment
+    source "$VENV_DIR/bin/activate"
+
+    # Install required Python packages from requirements.txt
+    # Check if packages are installed by testing multiple imports
+    PACKAGES_INSTALLED=true
+    for pkg in redis requests yaml flask; do
+        if ! python3 -c "import $pkg" 2>/dev/null; then
+            PACKAGES_INSTALLED=false
+            break
+        fi
+    done
+
+    if [ "$PACKAGES_INSTALLED" = false ]; then
+        if [ -f "tools/orchestrator/requirements.txt" ]; then
+            echo -e "${YELLOW}📦 Installing required Python packages...${NC}"
+            pip install -q -r tools/orchestrator/requirements.txt
+        else
+            # Fallback: install minimal packages
+            echo -e "${YELLOW}📦 Installing required Python packages...${NC}"
+            pip install -q requests pyyaml redis flask gitpython anthropic
+        fi
     fi
 
     # Run agent client
@@ -159,8 +184,25 @@ case "${1:-}" in
     logs)
         docker-compose logs -f orchestrator-api
         ;;
+    cleanup)
+        echo -e "${BLUE}🧹 Cleaning up stuck tasks...${NC}"
+        if ! check_infrastructure; then
+            echo -e "${RED}❌ Orchestrator not running!${NC}"
+            exit 1
+        fi
+
+        # Trigger cleanup via API
+        cleanup_result=$(curl -s -X POST "$ORCHESTRATOR_URL/cleanup" 2>&1)
+
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}✅ Cleanup completed${NC}"
+            echo "$cleanup_result" | python3 -c "import sys, json; d=json.load(sys.stdin); print(f\"   Recovered: {d.get('recovered', 0)} tasks\"); print(f\"   Failed reset: {d.get('failed_reset', 0)} tasks\")" 2>/dev/null || echo "$cleanup_result"
+        else
+            echo -e "${RED}❌ Cleanup failed${NC}"
+        fi
+        ;;
     reset)
-        echo -e "${YELLOW}⚠️  Resetting orchestrator state...${NC}"
+        echo -e "${YELLOW}⚠️  Resetting orchestrator state (full reset)...${NC}"
         docker-compose down
         docker volume rm $(basename $(pwd))_redis-data 2>/dev/null || true
         echo -e "${GREEN}✅ State reset${NC}"
@@ -179,12 +221,17 @@ case "${1:-}" in
         echo "Usage:"
         echo "  ./orchestrate.sh                Start an AI agent (run in multiple terminals)"
         echo "  ./orchestrate.sh status         Show orchestrator status"
+        echo "  ./orchestrate.sh cleanup        Clean stuck tasks (keep completed tasks)"
+        echo "  ./orchestrate.sh reset          Full reset (delete all Redis data)"
         echo "  ./orchestrate.sh stop           Stop infrastructure"
         echo "  ./orchestrate.sh logs           View orchestrator logs"
-        echo "  ./orchestrate.sh reset          Reset orchestrator state"
         echo "  ./orchestrate.sh test-persistence  Test Redis data persistence"
         echo "  ./orchestrate.sh test-workflow  Test implementation workflow (Fix #19)"
         echo "  ./orchestrate.sh help           Show this help"
+        echo ""
+        echo "Difference between cleanup and reset:"
+        echo "  cleanup: Recovers stuck/failed tasks → pending (keeps progress)"
+        echo "  reset:   Deletes ALL data, fresh start (loses all progress)"
         echo ""
         ;;
     *)
