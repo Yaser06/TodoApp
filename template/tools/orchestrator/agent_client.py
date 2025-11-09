@@ -374,7 +374,21 @@ class AIAgentClient:
 
     def git_create_branch(self, branch_name):
         """Create and checkout Git branch (or checkout if exists)"""
-        # Check if branch exists
+        # Get current branch first
+        current_branch_result = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=self.project_root,
+            capture_output=True,
+            text=True
+        )
+        current_branch = current_branch_result.stdout.strip()
+
+        # If already on target branch, nothing to do
+        if current_branch == branch_name:
+            print(f"   Already on branch {branch_name}")
+            return
+
+        # Check if branch exists locally
         result = subprocess.run(
             ["git", "rev-parse", "--verify", branch_name],
             cwd=self.project_root,
@@ -393,13 +407,29 @@ class AIAgentClient:
                 capture_output=True
             )
         else:
-            # Create new branch
-            subprocess.run(
-                ["git", "checkout", "-b", branch_name],
-                cwd=self.project_root,
-                check=True,
-                capture_output=True
-            )
+            # Branch doesn't exist locally, try to create it
+            print(f"   Creating new branch {branch_name}...")
+            try:
+                subprocess.run(
+                    ["git", "checkout", "-b", branch_name],
+                    cwd=self.project_root,
+                    check=True,
+                    capture_output=True,
+                    text=True
+                )
+            except subprocess.CalledProcessError as e:
+                # If creation fails, branch might exist remotely but not locally
+                # Try to checkout from remote
+                if "already exists" in e.stderr:
+                    print(f"   Branch exists remotely, checking out...")
+                    subprocess.run(
+                        ["git", "checkout", branch_name],
+                        cwd=self.project_root,
+                        check=True,
+                        capture_output=True
+                    )
+                else:
+                    raise
 
     def git_commit(self, task_id, task_title):
         """Commit all changes"""
@@ -633,8 +663,19 @@ git commit -m "feat: {task['title']} ({task_id})"
         Detect which AI tool is available (Fix #21)
 
         Returns: str - AI tool name or None
+
+        Environment Variables:
+        - AI_TOOL: Force specific tool (e.g., 'gemini-cli', 'openai-cli', 'claude-code')
+        - GEMINI_COMMAND: Custom command for Gemini (e.g., 'gemini', './my-gemini-wrapper.sh')
+        - OPENAI_COMMAND: Custom command for OpenAI (e.g., 'openai', './my-openai-wrapper.sh')
         """
         import shutil
+
+        # Environment variable override (highest priority)
+        ai_tool_env = os.environ.get('AI_TOOL')
+        if ai_tool_env:
+            print(f"   🎯 Using AI_TOOL from environment: {ai_tool_env}")
+            return ai_tool_env
 
         # Claude Code detection
         if shutil.which('claude'):
@@ -662,7 +703,28 @@ git commit -m "feat: {task['title']} ({task_id})"
         if shutil.which('github-copilot-cli'):
             return 'copilot-cli'
 
-        # Check for API keys in environment
+        # GENERIC: Custom AI command (HIGHEST PRIORITY after AI_TOOL override)
+        # This allows using ANY AI tool - Llama, Mistral, DeepSeek, etc.
+        custom_cmd = os.environ.get('CUSTOM_AI_COMMAND')
+        if custom_cmd:
+            print(f"   🎯 Using custom AI command: {custom_cmd}")
+            return 'custom-cli'
+
+        # Google Gemini CLI detection
+        # Check for various Gemini CLI tools (gemini, genai, google-ai, etc.)
+        for gemini_cli in ['gemini', 'genai', 'google-ai', 'gcloud-ai']:
+            if shutil.which(gemini_cli):
+                print(f"   ✓ Found Gemini CLI: {gemini_cli}")
+                return 'gemini-cli'
+
+        # OpenAI CLI detection
+        # Check for OpenAI CLI (openai, oai, etc.)
+        for openai_cli in ['openai', 'oai']:
+            if shutil.which(openai_cli):
+                print(f"   ✓ Found OpenAI CLI: {openai_cli}")
+                return 'openai-cli'
+
+        # Check for API keys in environment (fallback to API mode)
         if os.environ.get('ANTHROPIC_API_KEY'):
             return 'claude-api'
 
@@ -672,7 +734,12 @@ git commit -m "feat: {task['title']} ({task_id})"
         if os.environ.get('GOOGLE_API_KEY') or os.environ.get('GEMINI_API_KEY'):
             return 'gemini-api'
 
-        return None
+        # FALLBACK: Generic interactive mode - works with ANY AI tool manually
+        # No configuration needed, user implements with their own tool
+        print(f"   ℹ️  No AI tool auto-detected")
+        print(f"   🎯 Using GENERIC INTERACTIVE mode")
+        print(f"   💡 Implement tasks with any AI tool you want!")
+        return 'generic-interactive'
 
     def auto_implement_task(self, task):
         """
@@ -688,7 +755,15 @@ git commit -m "feat: {task['title']} ({task_id})"
         task_id = task['id']
 
         try:
-            if self.ai_tool == 'claude-code':
+            # GENERIC interactive mode (no AI configured - use any tool manually)
+            if self.ai_tool == 'generic-interactive':
+                return self.implement_with_generic_interactive(task)
+
+            # GENERIC custom AI command (works with ANY AI)
+            elif self.ai_tool == 'custom-cli':
+                return self.implement_with_custom_cli(task)
+
+            elif self.ai_tool == 'claude-code':
                 return self.implement_with_claude_code(task)
 
             elif self.ai_tool == 'cursor':
@@ -703,8 +778,14 @@ git commit -m "feat: {task['title']} ({task_id})"
             elif self.ai_tool == 'claude-api':
                 return self.implement_with_claude_api(task)
 
+            elif self.ai_tool == 'openai-cli':
+                return self.implement_with_openai_cli(task)
+
             elif self.ai_tool == 'openai-api':
                 return self.implement_with_openai_api(task)
+
+            elif self.ai_tool == 'gemini-cli':
+                return self.implement_with_gemini_cli(task)
 
             elif self.ai_tool == 'gemini-api':
                 return self.implement_with_gemini_api(task)
@@ -818,6 +899,166 @@ Work efficiently and minimize unnecessary tool calls. Focus on fixing the specif
             return False
         except Exception as e:
             print(f"   ❌ Claude Code error: {e}")
+            return False
+
+    def implement_with_generic_interactive(self, task):
+        """
+        GENERIC INTERACTIVE MODE (Fix #25 - Zero configuration)
+
+        No AI tool detected? No problem!
+        System prepares workspace, user implements with ANY tool they want.
+
+        Perfect for:
+        - Using AI tools not yet integrated
+        - Manual implementation with your favorite AI
+        - Testing without configuration
+
+        Usage: Just run ./orchestrate.sh - system auto-selects this mode
+        """
+        print("\n" + "="*70)
+        print("🎯 GENERIC INTERACTIVE MODE - Task Ready!")
+        print("="*70)
+        print(f"\n📋 Task: {task['title']}")
+        print(f"📁 Details: CURRENT_TASK.md (in project root)")
+        print(f"\n💡 HOW TO IMPLEMENT:")
+        print("   1. Open CURRENT_TASK.md - read task details")
+        print("   2. Use ANY AI tool you want:")
+        print("      - Claude Code: claude code")
+        print("      - Cursor: Open Cursor and use AI chat")
+        print("      - Gemini: Use Gemini web or CLI")
+        print("      - ChatGPT: Use ChatGPT web")
+        print("      - Copilot: Use GitHub Copilot")
+        print("      - Or ANY other AI tool!")
+        print("   3. Implement the task")
+        print("   4. System will auto-detect changes and continue")
+        print("\n⏳ Waiting for changes (timeout: 15 minutes)...")
+        print("=" * 70)
+
+        # Wait for git changes with smart polling
+        timeout = 900  # 15 minutes
+        start_time = time.time()
+        check_interval = 5  # Start with 5 seconds
+        last_message_time = start_time
+
+        while True:
+            # Check for git changes
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=self.project_root,
+                capture_output=True,
+                text=True
+            )
+
+            has_changes = bool(result.stdout.strip())
+
+            if has_changes:
+                print("\n✅ Changes detected! Implementation complete.")
+                print("🔄 System will now commit and continue...")
+                return True
+
+            # Show periodic status messages
+            elapsed = time.time() - start_time
+            if elapsed - (last_message_time - start_time) >= 60:  # Every minute
+                minutes_elapsed = int(elapsed / 60)
+                minutes_remaining = int((timeout - elapsed) / 60)
+                print(f"⏱️  Still waiting... ({minutes_elapsed} min elapsed, {minutes_remaining} min remaining)")
+                last_message_time = time.time()
+
+            # Check timeout
+            if elapsed > timeout:
+                print("\n⏰ Timeout reached - no changes detected")
+                print("💡 Tip: Make sure you saved your changes and they're visible in git status")
+                return False
+
+            # Adaptive polling: faster initially, slower later
+            if elapsed < 120:  # First 2 minutes
+                check_interval = 5
+            elif elapsed < 600:  # Next 8 minutes
+                check_interval = 15
+            else:  # Last 5 minutes
+                check_interval = 30
+
+            time.sleep(check_interval)
+
+    def implement_with_custom_cli(self, task):
+        """
+        GENERIC implementation for ANY AI tool (Fix #24 - Universal AI support)
+
+        Works with ANY AI that can be called via CLI:
+        - Llama, Mistral, DeepSeek, Qwen, etc.
+        - Custom wrappers around any AI API
+        - Local models via ollama, llama.cpp, etc.
+
+        Usage:
+            export CUSTOM_AI_COMMAND="ollama run llama3"
+            export AI_TOOL="custom-cli"
+            ./orchestrate.sh
+        """
+        custom_cmd = os.environ.get('CUSTOM_AI_COMMAND')
+        if not custom_cmd:
+            print(f"   ⚠️  CUSTOM_AI_COMMAND not set")
+            print(f"   💡 Set it to your AI command: export CUSTOM_AI_COMMAND='your-ai-tool'")
+            return False
+
+        print(f"   Using custom AI: {custom_cmd}")
+        print(f"   🤖 Implementing: {task['title']}")
+        print(f"   ⏳ This may take a few minutes...")
+
+        # Create prompt similar to Claude Code
+        prompt = f"""Read CURRENT_TASK.md and implement the task efficiently.
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Requirements:
+1. Implement the functionality described
+2. Write tests if needed
+3. Follow project patterns
+4. After implementing, commit your changes with a clear message
+
+IMPORTANT: Work efficiently and minimize unnecessary tool calls. The CURRENT_TASK.md file has all the details you need."""
+
+        try:
+            print(f"   💭 AI is thinking...")
+
+            # Split command and args
+            import shlex
+            cmd_parts = shlex.split(custom_cmd)
+
+            # Add prompt as last argument
+            full_cmd = cmd_parts + [prompt]
+
+            result = subprocess.run(
+                full_cmd,
+                cwd=self.project_root,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minute timeout
+            )
+
+            if result.returncode == 0:
+                print(f"   ✅ Custom AI completed implementation")
+                if result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    if len(lines) > 10:
+                        print(f"   📝 Summary (last 5 lines):")
+                        for line in lines[-5:]:
+                            print(f"      {line}")
+                return True
+            else:
+                print(f"   ⚠️  Custom AI returned error")
+                if result.stderr:
+                    error_lines = result.stderr.strip().split('\n')[:5]
+                    for line in error_lines:
+                        print(f"      {line}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠️  Custom AI timeout (10 min)")
+            return False
+        except Exception as e:
+            print(f"   ❌ Custom AI error: {e}")
             return False
 
     def implement_with_claude_code(self, task):
@@ -989,11 +1230,202 @@ After implementing, summarize what you did."""
             print(f"❌ Claude API error: {e}")
             return False
 
+    def implement_with_openai_cli(self, task):
+        """Implement task using OpenAI CLI (Codex or GPT-4)"""
+        import shutil
+
+        # Check for custom command in environment variable first
+        openai_cmd = os.environ.get('OPENAI_COMMAND')
+        if openai_cmd:
+            print(f"   🎯 Using custom OPENAI_COMMAND: {openai_cmd}")
+        else:
+            # Find which OpenAI CLI tool is available
+            for cli in ['openai', 'oai']:
+                if shutil.which(cli):
+                    openai_cmd = cli
+                    break
+
+        if not openai_cmd:
+            print(f"   ⚠️  No OpenAI CLI tool found")
+            print(f"   💡 Tip: Set OPENAI_COMMAND environment variable to your OpenAI CLI command")
+            print(f"   Example: export OPENAI_COMMAND='./my-openai-wrapper.sh'")
+            return False
+
+        print(f"   Using OpenAI CLI: {openai_cmd}")
+        print(f"   🤖 Implementing: {task['title']}")
+        print(f"   ⏳ This may take a few minutes...")
+
+        # Create prompt similar to Claude Code
+        prompt = f"""Read CURRENT_TASK.md and implement the task efficiently.
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Requirements:
+1. Implement the functionality described
+2. Write tests if needed
+3. Follow project patterns
+4. After implementing, commit your changes with a clear message
+
+IMPORTANT: Work efficiently and minimize unnecessary tool calls. The CURRENT_TASK.md file has all the details you need."""
+
+        try:
+            # Call OpenAI CLI
+            # Different CLI tools might have different command formats
+            # Try common patterns
+            print(f"   💭 OpenAI is thinking...")
+
+            # Try different command formats
+            cmd_variants = [
+                [openai_cmd, 'code', prompt],  # Code: openai code <prompt>
+                [openai_cmd, 'chat', prompt],  # Chat: openai chat <prompt>
+                [openai_cmd, 'codex', prompt],  # Codex: openai codex <prompt>
+                [openai_cmd, prompt],  # Direct: openai <prompt>
+                [openai_cmd, 'api', 'chat.completions.create', '-m', 'gpt-4', '-c', prompt],  # API style
+            ]
+
+            success = False
+            for cmd in cmd_variants:
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        cwd=self.project_root,
+                        capture_output=True,
+                        text=True,
+                        timeout=600  # 10 minute timeout
+                    )
+
+                    if result.returncode == 0:
+                        print(f"   ✅ OpenAI CLI completed implementation")
+                        if result.stdout:
+                            lines = result.stdout.strip().split('\n')
+                            if len(lines) > 10:
+                                print(f"   📝 Summary (last 5 lines):")
+                                for line in lines[-5:]:
+                                    print(f"      {line}")
+                        success = True
+                        break
+
+                except FileNotFoundError:
+                    continue  # Try next variant
+                except Exception:
+                    continue  # Try next variant
+
+            if not success:
+                print(f"   ⚠️  OpenAI CLI returned error or command format not recognized")
+                print(f"   💡 Tip: Set AI_TOOL environment variable or use API mode")
+                return False
+
+            return True
+
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠️  OpenAI CLI timeout (10 min)")
+            return False
+        except Exception as e:
+            print(f"   ❌ OpenAI CLI error: {e}")
+            return False
+
     def implement_with_openai_api(self, task):
         """Implement task using OpenAI API"""
         print(f"   Using OpenAI API...")
         print(f"   ⚠️  OpenAI API implementation not yet available")
         return False
+
+    def implement_with_gemini_cli(self, task):
+        """Implement task using Google Gemini CLI"""
+        import shutil
+
+        # Check for custom command in environment variable first
+        gemini_cmd = os.environ.get('GEMINI_COMMAND')
+        if gemini_cmd:
+            print(f"   🎯 Using custom GEMINI_COMMAND: {gemini_cmd}")
+        else:
+            # Find which Gemini CLI tool is available
+            for cli in ['gemini', 'genai', 'google-ai', 'gcloud-ai']:
+                if shutil.which(cli):
+                    gemini_cmd = cli
+                    break
+
+        if not gemini_cmd:
+            print(f"   ⚠️  No Gemini CLI tool found")
+            print(f"   💡 Tip: Set GEMINI_COMMAND environment variable to your Gemini CLI command")
+            print(f"   Example: export GEMINI_COMMAND='./my-gemini-wrapper.sh'")
+            return False
+
+        print(f"   Using Gemini CLI: {gemini_cmd}")
+        print(f"   🤖 Implementing: {task['title']}")
+        print(f"   ⏳ This may take a few minutes...")
+
+        # Create prompt similar to Claude Code
+        prompt = f"""Read CURRENT_TASK.md and implement the task efficiently.
+
+Task: {task['title']}
+Description: {task.get('description', '')}
+Acceptance Criteria: {task.get('acceptanceCriteria', '')}
+
+Requirements:
+1. Implement the functionality described
+2. Write tests if needed
+3. Follow project patterns
+4. After implementing, commit your changes with a clear message
+
+IMPORTANT: Work efficiently and minimize unnecessary tool calls. The CURRENT_TASK.md file has all the details you need."""
+
+        try:
+            # Call Gemini CLI
+            # Different CLI tools might have different command formats
+            # Try common patterns: gemini <prompt>, gemini chat <prompt>, etc.
+            print(f"   💭 Gemini is thinking...")
+
+            # Try different command formats
+            cmd_variants = [
+                [gemini_cmd, prompt],  # Direct: gemini <prompt>
+                [gemini_cmd, 'chat', prompt],  # Chat: gemini chat <prompt>
+                [gemini_cmd, 'code', prompt],  # Code: gemini code <prompt>
+                [gemini_cmd, 'run', prompt],  # Run: gemini run <prompt>
+            ]
+
+            success = False
+            for cmd in cmd_variants:
+                try:
+                    result = subprocess.run(
+                        cmd,
+                        cwd=self.project_root,
+                        capture_output=True,
+                        text=True,
+                        timeout=600  # 10 minute timeout
+                    )
+
+                    if result.returncode == 0:
+                        print(f"   ✅ Gemini CLI completed implementation")
+                        if result.stdout:
+                            lines = result.stdout.strip().split('\n')
+                            if len(lines) > 10:
+                                print(f"   📝 Summary (last 5 lines):")
+                                for line in lines[-5:]:
+                                    print(f"      {line}")
+                        success = True
+                        break
+
+                except FileNotFoundError:
+                    continue  # Try next variant
+                except Exception:
+                    continue  # Try next variant
+
+            if not success:
+                print(f"   ⚠️  Gemini CLI returned error or command format not recognized")
+                print(f"   💡 Tip: Set AI_TOOL environment variable to specify exact command")
+                return False
+
+            return True
+
+        except subprocess.TimeoutExpired:
+            print(f"   ⚠️  Gemini CLI timeout (10 min)")
+            return False
+        except Exception as e:
+            print(f"   ❌ Gemini CLI error: {e}")
+            return False
 
     def implement_with_gemini_api(self, task):
         """Implement task using Google Gemini API"""
